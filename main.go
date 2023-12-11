@@ -39,22 +39,6 @@ type Instrument struct {
 	Tick_size string `json:"tick_size"`
 }
 
-type OrderParams struct {
-    Variety         string `json:"variety"`
-    TradingSymbol   string `json:"tradingsymbol"`
-    SymbolToken     string `json:"symboltoken"`
-    TransactionType string `json:"transactiontype"`
-    Exchange        string `json:"exchange"`
-    OrderType       string `json:"ordertype"`
-    ProductType     string `json:"producttype"`
-    Duration        string `json:"duration"`
-    Price           string `json:"price"`
-    SquareOff       string `json:"squareoff"`
-    StopLoss        string `json:"stoploss"`
-    Quantity        string `json:"quantity"`
-	MarketPrice 	float64	`json:"marketprice"`
-}
-
 type change_input struct {
 	Mode string `json:"mode"`
 	ExchangeTokens exchange `json:"exchangeTokens"`
@@ -212,6 +196,17 @@ func monitorOrders(A *SmartApi.Client, auth clientParams, session SmartApi.UserS
 	}	
 }
 
+func updateJson(OrderParams []SmartApi.OrderParams, token string, latestprice float64) ([]SmartApi.OrderParams){
+
+	for _, i := range OrderParams {
+		if i.SymbolToken == token {
+			i.Price = latestprice
+		}
+	}
+
+	return OrderParams
+}
+
 func placeBulkOrder(A *SmartApi.Client, s string, exchange string)  {
 	var OrderParams []SmartApi.OrderParams
 	var ltpParams SmartApi.LTPParams
@@ -226,12 +221,13 @@ func placeBulkOrder(A *SmartApi.Client, s string, exchange string)  {
 		fmt.Println(err)
 	}
 
-	if json.Unmarshal(content, &OrderParams) != nil {
-		fmt.Println(err)
+	err = json.Unmarshal(content, &OrderParams)
+	if err != nil {
+		fmt.Println("Unmarshal Failed: ", err)
 	}
-
 	for _, stk := range OrderParams {
-		token := tokenLookUp( stk.TradingSymbol, instrument_list, exchange )
+		token := tokenLookUp(stk.TradingSymbol, instrument_list, exchange)
+		fmt.Println(token)
 		stk.SymbolToken = token
 		ltpParams.Exchange = exchange
 		ltpParams.SymbolToken = stk.SymbolToken
@@ -241,7 +237,7 @@ func placeBulkOrder(A *SmartApi.Client, s string, exchange string)  {
 			fmt.Println(err)
 		}
 		stk.Price = ltpResp.Ltp
-		if true {
+		if false {
 			fmt.Println("Placing Order for Stock: ", stk.TradingSymbol)
 			order, err := A.PlaceOrder(stk)
 			if err != nil {
@@ -250,17 +246,20 @@ func placeBulkOrder(A *SmartApi.Client, s string, exchange string)  {
 			}
 			fmt.Println("Placed Order ID and Script :- ", order)
 		}
-		updateJson, err := json.MarshalIndent(stk, "", "   ")
+
+		updatedJson := updateJson(OrderParams, token, ltpResp.Ltp)
+
+		updateJSON, err := json.MarshalIndent(updatedJson, "", "   ")
 		if err != nil {
 			fmt.Println("Error marshalling JSON:", err)
 			return
 		}
 
-		err = ioutil.WriteFile(s, updateJson, 0655)
+		err = ioutil.WriteFile(s, updateJSON, 0655)
 		if err != nil {
 			fmt.Println("Error writing JSON file:", err)
 			return
-		}
+		}	
 	}
 }
 
@@ -315,9 +314,8 @@ func authenticate(f string) (*SmartApi.Client, clientParams, SmartApi.UserSessio
 
 
 func main() {
-
-	stocksFilePath := "/Users/alurujawahar/Desktop/angel/tejmandi/stocks.json"
-	filepath := "/Users/alurujawahar/Desktop/angel/tejmandi/keys.json"
+	stocksFilePath := "/Users/alurujawahar/Desktop/angel/tejimandi/stocks.json"
+	filepath := "/Users/alurujawahar/Desktop/angel/tejimandi/keys.json"
 	placeorder := true
 
 	//Get Authenticated
@@ -327,12 +325,11 @@ func main() {
 		placeBulkOrder(ABClient, stocksFilePath, "NSE")
 	}
 
-	if true {
+	if false {
 		monitorOrders(ABClient, authParams, session)
 	}
 
 	if false {
 		orderBook(ABClient, authParams, session)
 	}
-
 }
