@@ -18,7 +18,7 @@ import (
 	SmartApi "github.com/angel-one/smartapigo"
 	"github.com/pquerna/otp/totp"
 )
-const stoploss = -0.2
+// const stoploss = -0.2
  
 type clientParams struct {
 	ClientCode  string `json:"client"`
@@ -117,15 +117,15 @@ func httpRequest( url string, method string , payload *strings.Reader,  auth cli
 // 	return foundToken
 // }
 
-func symbolLookUp(token string, instrument_list []Instrument, exchange string)  Instrument  {
-	var foundSymbol Instrument
-	for _, inst := range instrument_list {
-		if inst.Token == token && inst.Exch_seg == exchange && strings.Split(inst.Symbol, "-")[1] == "EQ"{
-			foundSymbol = inst
-		}
-	}	
-	return foundSymbol
-}
+// func symbolLookUp(token string, instrument_list []Instrument, exchange string)  Instrument  {
+// 	var foundSymbol Instrument
+// 	for _, inst := range instrument_list {
+// 		if inst.Token == token && inst.Exch_seg == exchange && strings.Split(inst.Symbol, "-")[1] == "EQ"{
+// 			foundSymbol = inst
+// 		}
+// 	}	
+// 	return foundSymbol
+// }
 
 func orderBook(A *SmartApi.Client, auth clientParams, session SmartApi.UserSession) {
 	url := "https://apiconnect.angelbroking.com/rest/secure/angelbroking/order/v1/getTradeBook"
@@ -135,20 +135,20 @@ func orderBook(A *SmartApi.Client, auth clientParams, session SmartApi.UserSessi
 	fmt.Println("Orders: ", string(body))
 }
 
-func getInstrumentList() ([]Instrument) {
-	const instrument_url = "https://margincalculator.angelbroking.com/OpenAPI_File/files/OpenAPIScripMaster.json"
-	var instrument_list []Instrument
-	response, err := http.Get(instrument_url)
-	if err != nil {
-		fmt.Println("Error opening instrument list url %v", err)
-	}
-	instrument_byte, _ := io.ReadAll(response.Body)
+// func getInstrumentList() ([]Instrument) {
+// 	const instrument_url = "https://margincalculator.angelbroking.com/OpenAPI_File/files/OpenAPIScripMaster.json"
+// 	var instrument_list []Instrument
+// 	response, err := http.Get(instrument_url)
+// 	if err != nil {
+// 		fmt.Println("Error opening instrument list url %v", err)
+// 	}
+// 	instrument_byte, _ := io.ReadAll(response.Body)
 
-	if json.Unmarshal(instrument_byte, &instrument_list) != nil {
-		fmt.Println("Unable to unMarshal response %v", err)
-	}
-	return instrument_list
-}
+// 	if json.Unmarshal(instrument_byte, &instrument_list) != nil {
+// 		fmt.Println("Unable to unMarshal response %v", err)
+// 	}
+// 	return instrument_list
+// }
 
 func getValueChange(token string, symbol string, auth clientParams, session SmartApi.UserSession) float64 {
 	var changeInput change_input
