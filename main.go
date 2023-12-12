@@ -15,11 +15,11 @@ import (
 	"os"
 	"strings"
 	"time"
-
 	SmartApi "github.com/angel-one/smartapigo"
 	"github.com/pquerna/otp/totp"
 )
-
+const stoploss = -0.2
+ 
 type clientParams struct {
 	ClientCode  string `json:"client"`
 	Password  string `json:"password"`
@@ -107,15 +107,15 @@ func httpRequest( url string, method string , payload *strings.Reader,  auth cli
 	return body 
 }
 
-func tokenLookUp(ticker string , instrument_list []Instrument, exchange string)  string  {
-	var foundToken string
-	for _, inst := range instrument_list {
-		if inst.Symbol == ticker && inst.Exch_seg == exchange && strings.Split(inst.Symbol, "-")[1] == "EQ"{
-			foundToken = inst.Token
-		}
-	}	
-	return foundToken
-}
+// func tokenLookUp(ticker string , instrument_list []Instrument, exchange string)  string  {
+// 	var foundToken string
+// 	for _, inst := range instrument_list {
+// 		if inst.Symbol == ticker && inst.Exch_seg == exchange && strings.Split(inst.Symbol, "-")[1] == "EQ"{
+// 			foundToken = inst.Token
+// 		}
+// 	}	
+// 	return foundToken
+// }
 
 func symbolLookUp(token string, instrument_list []Instrument, exchange string)  Instrument  {
 	var foundSymbol Instrument
@@ -150,57 +150,71 @@ func getInstrumentList() ([]Instrument) {
 	return instrument_list
 }
 
-func getValueChange(token string, auth clientParams, session SmartApi.UserSession) {
+func getValueChange(token string, symbol string, auth clientParams, session SmartApi.UserSession) float64 {
 	var changeInput change_input
 	var positionData position
+	var pecentageChange float64
 	url := "https://apiconnect.angelbroking.com/rest/secure/angelbroking/market/v1/quote/"
 	method := "POST"
 
 	changeInput.Mode = "FULL"
 	changeInput.ExchangeTokens.NSE = append(changeInput.ExchangeTokens.NSE, token)
-	instrument_list := getInstrumentList()
+	// instrument_list := getInstrumentList()
 
 	jsonData, err := json.Marshal(changeInput)
 	if err != nil {
 		fmt.Println("Error encoding JSON:", err)
-		return
+		os.Exit(1)
 	}
 	payload := strings.NewReader(string(jsonData))
 	body := httpRequest(url, method, payload, auth, session)
 
 	json.Unmarshal(body, &positionData)
-	symbol := symbolLookUp(token, instrument_list, "NSE")
+	// symbol := symbolLookUp(token, instrument_list, "NSE")
 		for _, f := range positionData.Data.Fetched {
-			fmt.Printf("Pecentage change of token %s is %.2f\n", symbol.Symbol , f.PercentChange)
+			fmt.Printf("Pecentage change of token %s is %.2f\n", symbol , f.PercentChange)
+			pecentageChange = f.PercentChange
 		}
+	
+	return pecentageChange
 }
 
 func monitorOrders(A *SmartApi.Client, auth clientParams, session SmartApi.UserSession) {
-	positions, err := A.GetPositions()
-	if err != nil {
-		fmt.Println("Error getting your Positions", err)
-		os.Exit(1)
-	}
-
-	for _, pos := range positions {
-		// symbol := symbolLookUp(pos.SymbolToken, instrument_list, "NSE")
-		// fmt.Println("NetValue of token", symbol.Symbol, pos.AverageNetPrice)
+	loopvar := 1
+	// var exitParams SmartApi.OrderParams
+	for loopvar != 0 {
+		positions, err := A.GetPositions()
 		if err != nil {
-			fmt.Println(err.Error())
+			fmt.Println("Error getting your Positions", err)
+			os.Exit(1)
 		}
-		if pos.ProductType == "INTRADAY" {
-			fmt.Println("Net Value ", pos.NetValue)
+		for _, pos := range positions {
+			// symbol := symbolLookUp(pos.SymbolToken, instrument_list, "NSE")
+			// fmt.Println("NetValue of token", symbol.Symbol, pos.AverageNetPrice)
+			if err != nil {
+				fmt.Println(err.Error())
+			}
+			if pos.ProductType == "INTRADAY" {
+				fmt.Println("Net Value ", pos.NetValue)
+			}
+			fmt.Println(pos.SymbolToken)
+			percentChange := getValueChange(pos.SymbolToken, pos.Tradingsymbol, auth, session)
+			// if percentChange < stoploss {
+			// 	exitParams.Exchange = pos.Exchange
+			// 	A.
+			// }
+			fmt.Println("(CONTINUE HERE) Use percentage change and make a call", percentChange)
+			session.UserSessionTokens, err = A.RenewAccessToken(session.RefreshToken)
 		}
-		getValueChange(pos.SymbolToken, auth, session)
-		session.UserSessionTokens, err = A.RenewAccessToken(session.RefreshToken)
-	}	
+		loopvar = len(positions)	
+	}
 }
 
-func updateJson(OrderParams []SmartApi.OrderParams, token string, latestprice float64) ([]SmartApi.OrderParams){
+func updateJson(OrderParams []SmartApi.OrderParams, tradingsymbol string, latestprice float64) ([]SmartApi.OrderParams){
 
-	for _, i := range OrderParams {
-		if i.SymbolToken == token {
-			i.Price = latestprice
+	for i := range OrderParams {
+		if OrderParams[i].TradingSymbol == tradingsymbol {
+			OrderParams[i].Price = latestprice
 		}
 	}
 
@@ -210,7 +224,7 @@ func updateJson(OrderParams []SmartApi.OrderParams, token string, latestprice fl
 func placeBulkOrder(A *SmartApi.Client, s string, exchange string)  {
 	var OrderParams []SmartApi.OrderParams
 	var ltpParams SmartApi.LTPParams
-	instrument_list := getInstrumentList()
+	// instrument_list := getInstrumentList()
 	res, err := os.Open(s)
 	if err != nil {
 		fmt.Println(err)
@@ -223,12 +237,12 @@ func placeBulkOrder(A *SmartApi.Client, s string, exchange string)  {
 
 	err = json.Unmarshal(content, &OrderParams)
 	if err != nil {
-		fmt.Println("Unmarshal Failed: ", err)
+		fmt.Println("Unmarshal Failed:", err)
 	}
 	for _, stk := range OrderParams {
-		token := tokenLookUp(stk.TradingSymbol, instrument_list, exchange)
-		fmt.Println(token)
-		stk.SymbolToken = token
+		// token := tokenLookUp(stk.TradingSymbol, instrument_list, exchange)
+		// fmt.Println(stk.TradingSymbol, token)
+		// stk.SymbolToken = token
 		ltpParams.Exchange = exchange
 		ltpParams.SymbolToken = stk.SymbolToken
 		ltpParams.TradingSymbol = stk.TradingSymbol
@@ -237,7 +251,7 @@ func placeBulkOrder(A *SmartApi.Client, s string, exchange string)  {
 			fmt.Println(err)
 		}
 		stk.Price = ltpResp.Ltp
-		if false {
+		if true {
 			fmt.Println("Placing Order for Stock: ", stk.TradingSymbol)
 			order, err := A.PlaceOrder(stk)
 			if err != nil {
@@ -247,7 +261,7 @@ func placeBulkOrder(A *SmartApi.Client, s string, exchange string)  {
 			fmt.Println("Placed Order ID and Script :- ", order)
 		}
 
-		updatedJson := updateJson(OrderParams, token, ltpResp.Ltp)
+		updatedJson := updateJson(OrderParams, stk.TradingSymbol, ltpResp.Ltp)
 
 		updateJSON, err := json.MarshalIndent(updatedJson, "", "   ")
 		if err != nil {
@@ -316,7 +330,7 @@ func authenticate(f string) (*SmartApi.Client, clientParams, SmartApi.UserSessio
 func main() {
 	stocksFilePath := "/Users/alurujawahar/Desktop/angel/tejimandi/stocks.json"
 	filepath := "/Users/alurujawahar/Desktop/angel/tejimandi/keys.json"
-	placeorder := true
+	placeorder := false
 
 	//Get Authenticated
 	ABClient, authParams, session := authenticate(filepath)
@@ -325,7 +339,7 @@ func main() {
 		placeBulkOrder(ABClient, stocksFilePath, "NSE")
 	}
 
-	if false {
+	if true {
 		monitorOrders(ABClient, authParams, session)
 	}
 
