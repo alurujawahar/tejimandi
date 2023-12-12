@@ -18,7 +18,7 @@ import (
 	SmartApi "github.com/angel-one/smartapigo"
 	"github.com/pquerna/otp/totp"
 )
-// const stoploss = -0.2
+const stoploss = -0.2
  
 type clientParams struct {
 	ClientCode  string `json:"client"`
@@ -153,7 +153,7 @@ func orderBook(A *SmartApi.Client, auth clientParams, session SmartApi.UserSessi
 func getValueChange(token string, symbol string, auth clientParams, session SmartApi.UserSession) float64 {
 	var changeInput change_input
 	var positionData position
-	var pecentageChange float64
+	var percentageChange float64
 	url := "https://apiconnect.angelbroking.com/rest/secure/angelbroking/market/v1/quote/"
 	method := "POST"
 
@@ -173,15 +173,16 @@ func getValueChange(token string, symbol string, auth clientParams, session Smar
 	// symbol := symbolLookUp(token, instrument_list, "NSE")
 		for _, f := range positionData.Data.Fetched {
 			fmt.Printf("Pecentage change of token %s is %.2f\n", symbol , f.PercentChange)
-			pecentageChange = f.PercentChange
+			percentageChange = f.PercentChange
 		}
 	
-	return pecentageChange
+	return percentageChange
 }
 
 func monitorOrders(A *SmartApi.Client, auth clientParams, session SmartApi.UserSession) {
 	loopvar := 1
-	// var exitParams SmartApi.OrderParams
+	var exitParams SmartApi.OrderParams
+	var ltpparams SmartApi.LTPParams
 	for loopvar != 0 {
 		positions, err := A.GetPositions()
 		if err != nil {
@@ -199,12 +200,36 @@ func monitorOrders(A *SmartApi.Client, auth clientParams, session SmartApi.UserS
 			}
 			fmt.Println(pos.SymbolToken)
 			percentChange := getValueChange(pos.SymbolToken, pos.Tradingsymbol, auth, session)
-			// if percentChange < stoploss {
-			// 	exitParams.Exchange = pos.Exchange
-			// 	A.
-			// }
-			fmt.Println("(CONTINUE HERE) Use percentage change and make a call", percentChange)
+			ltpparams.Exchange = pos.Exchange
+			ltpparams.SymbolToken = pos.SymbolToken
+			ltpparams.TradingSymbol = pos.Tradingsymbol
+			ltp, err := A.GetLTP(ltpparams)
+			if err != nil {
+				fmt.Println("unable to get Ltp for:", pos.Tradingsymbol, ltp)
+			}
+			if percentChange < stoploss {
+				exitParams.Exchange = pos.Exchange
+				exitParams.Variety = "NORMAL"
+				exitParams.TradingSymbol = pos.Tradingsymbol
+				exitParams.SymbolToken = pos.SymbolToken
+				exitParams.OrderType = "LIMIT" 
+				exitParams.ProductType = "INTRADAY"
+				exitParams.Duration = "DAY"
+				exitParams.SquareOff = "0"
+				exitParams.StopLoss = "0"
+				exitParams.Quantity = "1"
+				exitParams.Price = ltp.Ltp
+				exitParams.TransactionType = "SELL"
+				orderResponse, err := A.PlaceOrder(exitParams)
+				if err != nil {
+					fmt.Println("Failed to exit position", err)
+				}
+				fmt.Println("Successfully exited trading Symbol", pos.Tradingsymbol, orderResponse)
+			}
 			session.UserSessionTokens, err = A.RenewAccessToken(session.RefreshToken)
+			if err != nil {
+				fmt.Println("failed to refresh token:", err)
+			}
 		}
 		loopvar = len(positions)	
 	}
