@@ -107,15 +107,15 @@ func httpRequest( url string, method string , payload *strings.Reader,  auth cli
 	return body 
 }
 
-// func tokenLookUp(ticker string , instrument_list []Instrument, exchange string)  string  {
-// 	var foundToken string
-// 	for _, inst := range instrument_list {
-// 		if inst.Symbol == ticker && inst.Exch_seg == exchange && strings.Split(inst.Symbol, "-")[1] == "EQ"{
-// 			foundToken = inst.Token
-// 		}
-// 	}	
-// 	return foundToken
-// }
+func tokenLookUp(ticker string , instrument_list []Instrument, exchange string)  string  {
+	var foundToken string
+	for _, inst := range instrument_list {
+		if inst.Symbol == ticker && inst.Exch_seg == exchange && strings.Split(inst.Symbol, "-")[1] == "EQ"{
+			foundToken = inst.Token
+		}
+	}	
+	return foundToken
+}
 
 // func symbolLookUp(token string, instrument_list []Instrument, exchange string)  Instrument  {
 // 	var foundSymbol Instrument
@@ -135,20 +135,22 @@ func orderBook(A *SmartApi.Client, auth clientParams, session SmartApi.UserSessi
 	fmt.Println("Orders: ", string(body))
 }
 
-// func getInstrumentList() ([]Instrument) {
-// 	const instrument_url = "https://margincalculator.angelbroking.com/OpenAPI_File/files/OpenAPIScripMaster.json"
-// 	var instrument_list []Instrument
-// 	response, err := http.Get(instrument_url)
-// 	if err != nil {
-// 		fmt.Println("Error opening instrument list url %v", err)
-// 	}
-// 	instrument_byte, _ := io.ReadAll(response.Body)
+func getInstrumentList() ([]Instrument) {
+	const instrument_url = "https://margincalculator.angelbroking.com/OpenAPI_File/files/OpenAPIScripMaster.json"
+	var instrument_list []Instrument
+	response, err := http.Get(instrument_url)
+	if err != nil {
+		fmt.Println("Error opening instrument list url %v", err)
+	}
+	instrument_byte, _ := io.ReadAll(response.Body)
 
-// 	if json.Unmarshal(instrument_byte, &instrument_list) != nil {
-// 		fmt.Println("Unable to unMarshal response %v", err)
-// 	}
-// 	return instrument_list
-// }
+	if json.Unmarshal(instrument_byte, &instrument_list) != nil {
+		fmt.Println("Unable to unMarshal response %v", err)
+	}
+	token := tokenLookUp("YESBANK", instrument_list, "NSE" )
+	fmt.Println(token)
+	return instrument_list
+}
 
 func getValueChange(token string, symbol string, auth clientParams, session SmartApi.UserSession) float64 {
 	var changeInput change_input
@@ -177,6 +179,7 @@ func getValueChange(token string, symbol string, auth clientParams, session Smar
 		}
 	
 	return percentageChange
+	
 }
 
 func monitorOrders(A *SmartApi.Client, auth clientParams, session SmartApi.UserSession) {
@@ -355,7 +358,7 @@ func authenticate(f string) (*SmartApi.Client, clientParams, SmartApi.UserSessio
 func main() {
 	stocksFilePath := "/Users/alurujawahar/Desktop/angel/tejimandi/stocks.json"
 	filepath := "/Users/alurujawahar/Desktop/angel/tejimandi/keys.json"
-	placeorder := false
+	placeorder := true
 
 	//Get Authenticated
 	ABClient, authParams, session := authenticate(filepath)
@@ -370,5 +373,10 @@ func main() {
 
 	if false {
 		orderBook(ABClient, authParams, session)
+	}
+	if false {
+		instrument_list := getInstrumentList()
+		token := tokenLookUp("HDFCBANK", instrument_list, "NSE" )
+		fmt.Println(token)
 	}
 }
