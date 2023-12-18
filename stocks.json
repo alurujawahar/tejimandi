@@ -8,7 +8,7 @@
       "ordertype": "LIMIT",
       "producttype": "INTRADAY",
       "duration": "DAY",
-      "price": 225,
+      "price": 224.3,
       "squareoff": "0",
       "stoploss": "0",
       "quantity": "1"
@@ -22,7 +22,7 @@
       "ordertype": "LIMIT",
       "producttype": "INTRADAY",
       "duration": "DAY",
-      "price": 82.3,
+      "price": 82.8,
       "squareoff": "0",
       "stoploss": "0",
       "quantity": "1"

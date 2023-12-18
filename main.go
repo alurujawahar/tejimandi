@@ -7,18 +7,25 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"io"
+	// "io/ioutil"
+	"log"
 	"net/http"
 	"os"
 	"strings"
 	"time"
+
 	SmartApi "github.com/angel-one/smartapigo"
 	"github.com/pquerna/otp/totp"
+	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
 )
 const stoploss = -0.2
+
+const mongoUrl = "mongodb://localhost:27017"
  
 type clientParams struct {
 	ClientCode  string `json:"client"`
@@ -182,7 +189,7 @@ func getValueChange(token string, symbol string, auth clientParams, session Smar
 	
 }
 
-func monitorOrders(A *SmartApi.Client, auth clientParams, session SmartApi.UserSession) {
+func monitorOrders(A *SmartApi.Client, auth clientParams, session SmartApi.UserSession, client *mongo.Client) {
 	loopvar := 1
 	var exitParams SmartApi.OrderParams
 	var ltpparams SmartApi.LTPParams
@@ -193,8 +200,6 @@ func monitorOrders(A *SmartApi.Client, auth clientParams, session SmartApi.UserS
 			os.Exit(1)
 		}
 		for _, pos := range positions {
-			// symbol := symbolLookUp(pos.SymbolToken, instrument_list, "NSE")
-			// fmt.Println("NetValue of token", symbol.Symbol, pos.AverageNetPrice)
 			if err != nil {
 				fmt.Println(err.Error())
 			}
@@ -223,11 +228,12 @@ func monitorOrders(A *SmartApi.Client, auth clientParams, session SmartApi.UserS
 				exitParams.Quantity = "1"
 				exitParams.Price = ltp.Ltp
 				exitParams.TransactionType = "SELL"
+				exitParams.Executed = false
 				orderResponse, err := A.PlaceOrder(exitParams)
 				if err != nil {
 					fmt.Println("Failed to exit position", err)
 				}
-				fmt.Println("Successfully exited trading Symbol", pos.Tradingsymbol, orderResponse)
+				fmt.Println("Successfully exited trading Symbol", pos.Tradingsymbol, orderResponse.Script, orderResponse.OrderID)
 			}
 			session.UserSessionTokens, err = A.RenewAccessToken(session.RefreshToken)
 			if err != nil {
@@ -238,18 +244,18 @@ func monitorOrders(A *SmartApi.Client, auth clientParams, session SmartApi.UserS
 	}
 }
 
-func updateJson(OrderParams []SmartApi.OrderParams, tradingsymbol string, latestprice float64) ([]SmartApi.OrderParams){
+// func updateJson(OrderParams []SmartApi.OrderParams, tradingsymbol string, latestprice float64) ([]SmartApi.OrderParams){
 
-	for i := range OrderParams {
-		if OrderParams[i].TradingSymbol == tradingsymbol {
-			OrderParams[i].Price = latestprice
-		}
-	}
+// 	for i := range OrderParams {
+// 		if OrderParams[i].TradingSymbol == tradingsymbol {
+// 			OrderParams[i].Price = latestprice
+// 		}
+// 	}
 
-	return OrderParams
-}
+// 	return OrderParams
+// }
 
-func placeBulkOrder(A *SmartApi.Client, s string, exchange string)  {
+func placeBulkOrder(A *SmartApi.Client, s string, exchange string, client *mongo.Client)  {
 	var OrderParams []SmartApi.OrderParams
 	var ltpParams SmartApi.LTPParams
 	// instrument_list := getInstrumentList()
@@ -279,7 +285,9 @@ func placeBulkOrder(A *SmartApi.Client, s string, exchange string)  {
 			fmt.Println(err)
 		}
 		stk.Price = ltpResp.Ltp
-		if true {
+		stk.Executed = false
+
+		if false {
 			fmt.Println("Placing Order for Stock: ", stk.TradingSymbol)
 			order, err := A.PlaceOrder(stk)
 			if err != nil {
@@ -287,21 +295,27 @@ func placeBulkOrder(A *SmartApi.Client, s string, exchange string)  {
 				return
 			}
 			fmt.Println("Placed Order ID and Script :- ", order)
+			stk.Executed = true
 		}
 
-		updatedJson := updateJson(OrderParams, stk.TradingSymbol, ltpResp.Ltp)
-
-		updateJSON, err := json.MarshalIndent(updatedJson, "", "   ")
+		collection := client.Database("stocks").Collection("list")
+		_, err = collection.InsertOne(context.Background(), stk)
 		if err != nil {
-			fmt.Println("Error marshalling JSON:", err)
-			return
+			log.Fatal(err)
 		}
+		// updatedJson := updateJson(OrderParams, stk.TradingSymbol, ltpResp.Ltp)
 
-		err = ioutil.WriteFile(s, updateJSON, 0655)
-		if err != nil {
-			fmt.Println("Error writing JSON file:", err)
-			return
-		}	
+		// updateJSON, err := json.MarshalIndent(updatedJson, "", "   ")
+		// if err != nil {
+		// 	fmt.Println("Error marshalling JSON:", err)
+		// 	return
+		// }
+
+		// err = ioutil.WriteFile(s, updateJSON, 0655)
+		// if err != nil {
+		// 	fmt.Println("Error writing JSON file:", err)
+		// 	return
+		// }	
 	}
 }
 
@@ -354,21 +368,41 @@ func authenticate(f string) (*SmartApi.Client, clientParams, SmartApi.UserSessio
 	return ABClient, params, session
 }
 
+func connectMongo() *mongo.Client {
+	clientOptions := options.Client().ApplyURI(mongoUrl)
+
+	client, err := mongo.Connect(context.Background(), clientOptions)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	err = client.Ping(context.Background(), nil)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	fmt.Println("Connected to MongoDB!")
+
+	return client 
+
+}
 
 func main() {
 	stocksFilePath := "/Users/alurujawahar/Desktop/angel/tejimandi/stocks.json"
 	filepath := "/Users/alurujawahar/Desktop/angel/tejimandi/keys.json"
 	placeorder := true
 
+	client := connectMongo()
 	//Get Authenticated
 	ABClient, authParams, session := authenticate(filepath)
+
 	//Place Bulk Order
 	if placeorder {
-		placeBulkOrder(ABClient, stocksFilePath, "NSE")
+		placeBulkOrder(ABClient, stocksFilePath, "NSE", client)
 	}
 
-	if true {
-		monitorOrders(ABClient, authParams, session)
+	if false {
+		monitorOrders(ABClient, authParams, session, client)
 	}
 
 	if false {
