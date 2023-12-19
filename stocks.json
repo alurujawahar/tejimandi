@@ -1,20 +1,6 @@
 [
    {
       "variety": "NORMAL",
-      "tradingsymbol": "BANKBARODA-EQ",
-      "symboltoken": "4668",
-      "transactiontype": "BUY",
-      "exchange": "NSE",
-      "ordertype": "LIMIT",
-      "producttype": "INTRADAY",
-      "duration": "DAY",
-      "price": 224.3,
-      "squareoff": "0",
-      "stoploss": "0",
-      "quantity": "1"
-   },
-   {
-      "variety": "NORMAL",
       "tradingsymbol": "NBCC-EQ",
       "symboltoken": "31415",
       "transactiontype": "BUY",

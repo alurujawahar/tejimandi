@@ -11,7 +11,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	// "io/ioutil"
 	"log"
 	"net/http"
 	"os"
@@ -20,6 +19,7 @@ import (
 
 	SmartApi "github.com/angel-one/smartapigo"
 	"github.com/pquerna/otp/totp"
+	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
@@ -189,6 +189,61 @@ func getValueChange(token string, symbol string, auth clientParams, session Smar
 	
 }
 
+func queryMongo(client *mongo.Client, tradingSymbol string) (SmartApi.OrderParams, bson.M){
+	// Access a MongoDB collection
+	collection := client.Database("stocks").Collection("list")
+
+	// Define a filter for the query
+	filter := bson.D{{Key: "tradingsymbol", Value: bson.D{{Key: "$eq", Value: tradingSymbol}}}}
+	options := options.FindOne().SetProjection(bson.D{{Key: "_id", Value: 1}})
+
+	// Define options for the query (e.g., sorting)
+	// options := options.FindOne().SetSort(bson.D{{Key: "age", Value: 1}})
+	// Find a single document in the collection based on the filter and options
+	var objectId bson.M
+	var result SmartApi.OrderParams
+	err := collection.FindOne(context.Background(), filter, options).Decode(&objectId)
+	if err == mongo.ErrNoDocuments {
+		fmt.Println("No matching document found.")
+	} else if err != nil {
+		log.Fatal(err)
+	} else {
+		fmt.Println("Query executed successfully!")
+		fmt.Println(objectId["_id"])
+	}
+
+	err = collection.FindOne(context.Background(), filter).Decode(&result)
+	if err == mongo.ErrNoDocuments {
+		fmt.Println("No matching document found.")
+	} else if err != nil {
+		log.Fatal(err)
+	} else {
+		fmt.Println("Query executed successfully!")
+	}
+	return result, objectId
+}
+
+func updateMongo(client *mongo.Client, _id bson.M) {
+	collection := client.Database("stocks").Collection("list")
+
+    // Define the filter based on the document's _id
+    filter := bson.D{{Key: "_id", Value: _id}} // Replace with the actual _id
+
+    // Define the update to be performed
+    update := bson.D{
+        {Key: "$set", Value: bson.D{{Key: "executed", Value: false}}}, 
+    }
+
+    // Perform the update
+    result, err := collection.UpdateOne(context.Background(), filter, update)
+    if err != nil {
+        log.Fatal(err)
+    }
+
+    fmt.Printf("Matched %v document(s) and modified %v document(s)\n", result.MatchedCount, result.ModifiedCount)
+
+}
+
 func monitorOrders(A *SmartApi.Client, auth clientParams, session SmartApi.UserSession, client *mongo.Client) {
 	loopvar := 1
 	var exitParams SmartApi.OrderParams
@@ -215,7 +270,8 @@ func monitorOrders(A *SmartApi.Client, auth clientParams, session SmartApi.UserS
 			if err != nil {
 				fmt.Println("unable to get Ltp for:", pos.Tradingsymbol, ltp)
 			}
-			if percentChange < stoploss {
+			data, objectId := queryMongo(client, pos.Tradingsymbol)
+			if percentChange < stoploss && data.Executed {
 				exitParams.Exchange = pos.Exchange
 				exitParams.Variety = "NORMAL"
 				exitParams.TradingSymbol = pos.Tradingsymbol
@@ -234,6 +290,7 @@ func monitorOrders(A *SmartApi.Client, auth clientParams, session SmartApi.UserS
 					fmt.Println("Failed to exit position", err)
 				}
 				fmt.Println("Successfully exited trading Symbol", pos.Tradingsymbol, orderResponse.Script, orderResponse.OrderID)
+				updateMongo(client, objectId)
 			}
 			session.UserSessionTokens, err = A.RenewAccessToken(session.RefreshToken)
 			if err != nil {
@@ -285,9 +342,8 @@ func placeBulkOrder(A *SmartApi.Client, s string, exchange string, client *mongo
 			fmt.Println(err)
 		}
 		stk.Price = ltpResp.Ltp
-		stk.Executed = false
 
-		if false {
+		if true {
 			fmt.Println("Placing Order for Stock: ", stk.TradingSymbol)
 			order, err := A.PlaceOrder(stk)
 			if err != nil {
@@ -390,7 +446,7 @@ func connectMongo() *mongo.Client {
 func main() {
 	stocksFilePath := "/Users/alurujawahar/Desktop/angel/tejimandi/stocks.json"
 	filepath := "/Users/alurujawahar/Desktop/angel/tejimandi/keys.json"
-	placeorder := true
+	placeorder := false
 
 	client := connectMongo()
 	//Get Authenticated
@@ -401,7 +457,7 @@ func main() {
 		placeBulkOrder(ABClient, stocksFilePath, "NSE", client)
 	}
 
-	if false {
+	if true {
 		monitorOrders(ABClient, authParams, session, client)
 	}
 
