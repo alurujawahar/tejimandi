@@ -227,7 +227,7 @@ func updateMongo(client *mongo.Client, _id bson.M) {
 	collection := client.Database("stocks").Collection("list")
 
     // Define the filter based on the document's _id
-    filter := bson.D{{Key: "_id", Value: _id}} // Replace with the actual _id
+    filter := bson.D{{Key: "_id", Value: _id["_id"]}} // Replace with the actual _id
 
     // Define the update to be performed
     update := bson.D{
@@ -285,11 +285,14 @@ func monitorOrders(A *SmartApi.Client, auth clientParams, session SmartApi.UserS
 				exitParams.Price = ltp.Ltp
 				exitParams.TransactionType = "SELL"
 				exitParams.Executed = false
-				orderResponse, err := A.PlaceOrder(exitParams)
-				if err != nil {
-					fmt.Println("Failed to exit position", err)
+				if true {
+					orderResponse, err := A.PlaceOrder(exitParams)
+					if err != nil {
+						fmt.Println("Failed to exit position", err)
+					}
+					fmt.Println("Successfully exited trading Symbol", pos.Tradingsymbol, orderResponse.Script, orderResponse.OrderID)
 				}
-				fmt.Println("Successfully exited trading Symbol", pos.Tradingsymbol, orderResponse.Script, orderResponse.OrderID)
+				fmt.Println("object ID:", objectId["_id"])
 				updateMongo(client, objectId)
 			}
 			session.UserSessionTokens, err = A.RenewAccessToken(session.RefreshToken)
@@ -446,7 +449,7 @@ func connectMongo() *mongo.Client {
 func main() {
 	stocksFilePath := "/Users/alurujawahar/Desktop/angel/tejimandi/stocks.json"
 	filepath := "/Users/alurujawahar/Desktop/angel/tejimandi/keys.json"
-	placeorder := false
+	placeorder := true
 
 	client := connectMongo()
 	//Get Authenticated
