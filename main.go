@@ -450,7 +450,7 @@ func main() {
 	stocksFilePath := "/Users/alurujawahar/Desktop/angel/tejimandi/stocks.json"
 	filepath := "/Users/alurujawahar/Desktop/angel/tejimandi/keys.json"
 	placeorder := true
-
+	
 	client := connectMongo()
 	//Get Authenticated
 	ABClient, authParams, session := authenticate(filepath)
@@ -468,8 +468,20 @@ func main() {
 		orderBook(ABClient, authParams, session)
 	}
 	if false {
+		var ListParams []SmartApi.OrderParams
 		instrument_list := getInstrumentList()
-		token := tokenLookUp("HDFCBANK", instrument_list, "NSE" )
-		fmt.Println(token)
+		res, err := os.Open(stocksFilePath)
+		if err != nil {
+			fmt.Println(err)
+		}
+		content, err := io.ReadAll(res)
+		if err != nil {
+			fmt.Println(err)
+		}
+		json.Unmarshal(content, &ListParams)
+		for _, list := range ListParams {
+			token := tokenLookUp(list.TradingSymbol , instrument_list, "NSE" )
+			fmt.Println(list.TradingSymbol, token )
+		}
 	}
 }
