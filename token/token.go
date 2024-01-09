@@ -22,7 +22,7 @@ type Instrument struct {
 }
 
 
-func tokenLookUp(ticker string , instrument_list []Instrument, exchange string)  string  {
+func TokenLookUp(ticker string , instrument_list []Instrument, exchange string)  string  {
 	var foundToken string
 	for _, inst := range instrument_list {
 		if inst.Symbol == ticker && inst.Exch_seg == exchange && strings.Split(inst.Symbol, "-")[1] == "EQ"{
@@ -45,7 +45,7 @@ func getInstrumentList() ([]Instrument) {
 	if json.Unmarshal(instrument_byte, &instrument_list) != nil {
 		fmt.Println("Unable to unMarshal response %v", err)
 	}
-	token := tokenLookUp("YESBANK", instrument_list, "NSE" )
+	token := TokenLookUp("YESBANK", instrument_list, "NSE" )
 	fmt.Println(token)
 	return instrument_list
 }

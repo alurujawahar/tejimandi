@@ -10,14 +10,14 @@ import (
 	"os"
 	"strings"
 	"time"
-
 	SmartApi "github.com/angel-one/smartapigo"
 	"github.com/pquerna/otp/totp"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
-	"https://github.com/alurujawahar/tejimandi/token"
+	tokn "github.com/alurujawahar/tejimandi/token"
 )
+
 const stoploss = -0.2
 
 const mongoUrl = "mongodb://localhost:27017"
