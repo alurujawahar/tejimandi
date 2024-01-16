@@ -1,4 +1,4 @@
-package db
+package database
 
 import (
 	"context"
@@ -12,7 +12,7 @@ import (
 )
 const mongoUrl = "mongodb://localhost:27017"
 
-func queryMongo(client *mongo.Client, tradingSymbol string) (SmartApi.OrderParams, bson.M){
+func QueryMongo(client *mongo.Client, tradingSymbol string) (SmartApi.OrderParams, bson.M){
 	// Access a MongoDB collection
 	collection := client.Database("stocks").Collection("list")
 
@@ -46,7 +46,7 @@ func queryMongo(client *mongo.Client, tradingSymbol string) (SmartApi.OrderParam
 	return result, objectId
 }
 
-func updateMongo(client *mongo.Client, _id bson.M) {
+func UpdateMongo(client *mongo.Client, _id bson.M) {
 	collection := client.Database("stocks").Collection("list")
 
     // Define the filter based on the document's _id
@@ -66,7 +66,7 @@ func updateMongo(client *mongo.Client, _id bson.M) {
     fmt.Printf("Matched %v document(s) and modified %v document(s)\n", result.MatchedCount, result.ModifiedCount)
 }
 
-func connectMongo() *mongo.Client {
+func ConnectMongo() *mongo.Client {
 	clientOptions := options.Client().ApplyURI(mongoUrl)
 
 	client, err := mongo.Connect(context.Background(), clientOptions)

@@ -8,6 +8,8 @@ import (
 
 	SmartApi "github.com/angel-one/smartapigo"
 	"go.mongodb.org/mongo-driver/mongo"
+	h "github.com/alurujawahar/tejimandi/httpRequest"
+	db "github.com/alurujawahar/tejimandi/database"
 )
 
 const stoploss = -0.2
@@ -66,7 +68,7 @@ func getValueChange(token string, symbol string, auth clientParams, session Smar
 		os.Exit(1)
 	}
 	payload := strings.NewReader(string(jsonData))
-	body := httpRequest(url, method, payload, auth, session)
+	body := h.HttpRequest(url, method, payload, auth, session)
 
 	json.Unmarshal(body, &positionData)
 	// symbol := symbolLookUp(token, instrument_list, "NSE")
@@ -79,7 +81,7 @@ func getValueChange(token string, symbol string, auth clientParams, session Smar
 }
 
 
-func monitorOrders(A *SmartApi.Client, auth clientParams, session SmartApi.UserSession, client *mongo.Client) {
+func MonitorOrders(A *SmartApi.Client, auth clientParams, session SmartApi.UserSession, client *mongo.Client) {
 	loopvar := 1
 	var exitParams SmartApi.OrderParams
 	var ltpparams SmartApi.LTPParams
@@ -105,7 +107,7 @@ func monitorOrders(A *SmartApi.Client, auth clientParams, session SmartApi.UserS
 			if err != nil {
 				fmt.Println("unable to get Ltp for:", pos.Tradingsymbol, ltp)
 			}
-			data, objectId := queryMongo(client, pos.Tradingsymbol)
+			data, objectId := db.QueryMongo(client, pos.Tradingsymbol)
 			if percentChange < stoploss && data.Executed {
 				exitParams.Exchange = pos.Exchange
 				exitParams.Variety = "NORMAL"
@@ -128,7 +130,7 @@ func monitorOrders(A *SmartApi.Client, auth clientParams, session SmartApi.UserS
 					fmt.Println("Successfully exited trading Symbol", pos.Tradingsymbol, orderResponse.Script, orderResponse.OrderID)
 				}
 				fmt.Println("object ID:", objectId["_id"])
-				updateMongo(client, objectId)
+				db.UpdateMongo(client, objectId)
 			}
 			session.UserSessionTokens, err = A.RenewAccessToken(session.RefreshToken)
 			if err != nil {

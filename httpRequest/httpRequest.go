@@ -16,7 +16,7 @@ type clientParams struct {
 	TOTPKEY string `json:"totp"`
 }
 
-func httpRequest( url string, method string , payload *strings.Reader,  auth clientParams, session SmartApi.UserSession) ([]byte) {
+func HttpRequest( url string, method string , payload *strings.Reader, auth clientParams, session SmartApi.UserSession) ([]byte) {
 	client := &http.Client {
 	}
 	req, err := http.NewRequest(method, url, payload)

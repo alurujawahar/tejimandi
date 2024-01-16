@@ -11,6 +11,7 @@ import (
 
 	SmartApi "github.com/angel-one/smartapigo"
 	"go.mongodb.org/mongo-driver/mongo"
+	h "github.com/alurujawahar/tejimandi/httpRequest"
 )
 
 type clientParams struct {
@@ -20,16 +21,16 @@ type clientParams struct {
 	TOTPKEY string `json:"totp"`
 }
 
-func orderBook(A *SmartApi.Client, auth clientParams, session SmartApi.UserSession) {
+func OrderBook(A *SmartApi.Client, auth clientParams, session SmartApi.UserSession) {
 	url := "https://apiconnect.angelbroking.com/rest/secure/angelbroking/order/v1/getTradeBook"
 	method := "GET"
 	var payload *strings.Reader
-	body := httpRequest(url, method, payload, auth, session)
+	body := h.HttpRequest(url, method, payload, auth, session)
 	fmt.Println("Orders: ", string(body))
 }
 
 
-func placeBulkOrder(A *SmartApi.Client, s string, exchange string, client *mongo.Client)  {
+func PlaceBulkOrder(A *SmartApi.Client, s string, exchange string, client *mongo.Client)  {
 	var OrderParams []SmartApi.OrderParams
 	var ltpParams SmartApi.LTPParams
 	// instrument_list := getInstrumentList()

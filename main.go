@@ -10,11 +10,9 @@ import (
 	"github.com/pquerna/otp/totp"
 	token "github.com/alurujawahar/tejimandi/token"
 	order "github.com/alurujawahar/tejimandi/order"
+	db "github.com/alurujawahar/tejimandi/database"
+	market "github.com/alurujawahar/tejimandi/market"
 )
-
-const stoploss = -0.2
-
-const mongoUrl = "mongodb://localhost:27017"
  
 type clientParams struct {
 	ClientCode  string `json:"client"`
@@ -125,25 +123,26 @@ func main() {
 	filepath := "/Users/alurujawahar/Desktop/angel/tejimandi/keys.json"
 	placeorder := true
 	
-	client := connectMongo()
+	client := db.ConnectMongo()
+
 	//Get Authenticated
 	ABClient, authParams, session := authenticate(filepath)
 
 	//Place Bulk Order
 	if placeorder {
-		placeBulkOrder(ABClient, stocksFilePath, "NSE", client)
+		order.PlaceBulkOrder(ABClient, stocksFilePath, "NSE", client)
 	}
 
 	if true {
-		monitorOrders(ABClient, authParams, session, client)
+		market.MonitorOrders(ABClient, authParams, session, client)
 	}
 
 	if false {
-		orderBook(ABClient, authParams, session)
+		order.OrderBook(ABClient, authParams, session)
 	}
 	if false {
 		var ListParams []SmartApi.OrderParams
-		instrument_list := getInstrumentList()
+		instrument_list := token.GetInstrumentList()
 		res, err := os.Open(stocksFilePath)
 		if err != nil {
 			fmt.Println(err)
@@ -154,7 +153,7 @@ func main() {
 		}
 		json.Unmarshal(content, &ListParams)
 		for _, list := range ListParams {
-			token := tokenLookUp(list.TradingSymbol , instrument_list, "NSE" )
+			token := token.TokenLookUp(list.TradingSymbol , instrument_list, "NSE" )
 			fmt.Println(list.TradingSymbol, token )
 		}
 	}

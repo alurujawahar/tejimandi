@@ -33,7 +33,7 @@ func TokenLookUp(ticker string , instrument_list []Instrument, exchange string) 
 }
 
 
-func getInstrumentList() ([]Instrument) {
+func GetInstrumentList() ([]Instrument) {
 	const instrument_url = "https://margincalculator.angelbroking.com/OpenAPI_File/files/OpenAPIScripMaster.json"
 	var instrument_list []Instrument
 	response, err := http.Get(instrument_url)
