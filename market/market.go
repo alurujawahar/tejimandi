@@ -13,12 +13,12 @@ import (
 )
 
 const stoploss = -0.2
-type clientParams struct {
-	ClientCode  string `json:"client"`
-	Password  string `json:"password"`
-	APIKey  string `json:"api_key"`
-	TOTPKEY string `json:"totp"`
-}
+// type ClientParams struct {
+// 	ClientCode  string `json:"client"`
+// 	Password  string `json:"password"`
+// 	APIKey  string `json:"api_key"`
+// 	TOTPKEY string `json:"totp"`
+// }
 
 type change_input struct {
 	Mode string `json:"mode"`
@@ -51,7 +51,7 @@ type fetched struct {
 	PercentChange float64 `json:"percentChange"`
 }
 
-func getValueChange(token string, symbol string, auth clientParams, session SmartApi.UserSession) float64 {
+func getValueChange(token string, symbol string, auth h.ClientParams, session SmartApi.UserSession) float64 {
 	var changeInput change_input
 	var positionData position
 	var percentageChange float64
@@ -81,7 +81,7 @@ func getValueChange(token string, symbol string, auth clientParams, session Smar
 }
 
 
-func MonitorOrders(A *SmartApi.Client, auth clientParams, session SmartApi.UserSession, client *mongo.Client) {
+func MonitorOrders(A *SmartApi.Client, auth h.ClientParams, session SmartApi.UserSession, client *mongo.Client) {
 	loopvar := 1
 	var exitParams SmartApi.OrderParams
 	var ltpparams SmartApi.LTPParams

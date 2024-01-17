@@ -14,14 +14,14 @@ import (
 	h "github.com/alurujawahar/tejimandi/httpRequest"
 )
 
-type clientParams struct {
-	ClientCode  string `json:"client"`
-	Password  string `json:"password"`
-	APIKey  string `json:"api_key"`
-	TOTPKEY string `json:"totp"`
-}
+// type ClientParams struct {
+// 	ClientCode  string `json:"client"`
+// 	Password  string `json:"password"`
+// 	APIKey  string `json:"api_key"`
+// 	TOTPKEY string `json:"totp"`
+// }
 
-func OrderBook(A *SmartApi.Client, auth clientParams, session SmartApi.UserSession) {
+func OrderBook(A *SmartApi.Client, auth h.ClientParams, session SmartApi.UserSession) {
 	url := "https://apiconnect.angelbroking.com/rest/secure/angelbroking/order/v1/getTradeBook"
 	method := "GET"
 	var payload *strings.Reader

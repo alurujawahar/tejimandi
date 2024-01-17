@@ -9,14 +9,14 @@ import (
 	SmartApi "github.com/angel-one/smartapigo"
 )
 
-type clientParams struct {
+type ClientParams struct {
 	ClientCode  string `json:"client"`
 	Password  string `json:"password"`
 	APIKey  string `json:"api_key"`
 	TOTPKEY string `json:"totp"`
 }
 
-func HttpRequest( url string, method string , payload *strings.Reader, auth clientParams, session SmartApi.UserSession) ([]byte) {
+func HttpRequest( url string, method string , payload *strings.Reader, auth ClientParams, session SmartApi.UserSession) ([]byte) {
 	client := &http.Client {
 	}
 	req, err := http.NewRequest(method, url, payload)

@@ -12,63 +12,12 @@ import (
 	order "github.com/alurujawahar/tejimandi/order"
 	db "github.com/alurujawahar/tejimandi/database"
 	market "github.com/alurujawahar/tejimandi/market"
+	h "github.com/alurujawahar/tejimandi/httpRequest"
 )
- 
-type clientParams struct {
-	ClientCode  string `json:"client"`
-	Password  string `json:"password"`
-	APIKey  string `json:"api_key"`
-	TOTPKEY string `json:"totp"`
-}
-
-type Instrument struct {
-	Token string `json:"token"`
-	Symbol string `json:"symbol"`
-	Name string `json:"name"`
-	Expiry string `json:"expiry"`
-	Strike string `json:"strike"`
-	Lotsize string `json:"lotsize"`
-	Instrumenttype string `json:"instrumenttype"`
-	Exch_seg string `json:"exch_seg"`
-	Tick_size string `json:"tick_size"`
-}
-
-type change_input struct {
-	Mode string `json:"mode"`
-	ExchangeTokens exchange `json:"exchangeTokens"`
-}
-
-type exchange struct {
-	NSE []string `json:"NSE"`
-}
-
-type position struct {
-	Status bool `json:"status"`
-	Message string `json:"message"`
-	Errorcode string `json:"errorcode"`
-	Data position_data `json:"data"`
-}
-
-type position_data struct {
-
-	Fetched  []fetched `json:"fetched"`
-}
-
-type fetched struct {
-	Exchange string `json:"exchange"`
-	TradingSymbol string `json:"tradingSymbol"`
-	SymbolToken string `json:"symbolToken"`
-	Ltp  float64 `json:"ltp"` 
-	Open float64 `json:"open"`
-	High float64 `json:"high"`
-	Low float64 `json:"low"`
-	Close float64 `json:"close"`
-	PercentChange float64 `json:"percentChange"`
-}
 
 
-func authenticate(f string) (*SmartApi.Client, clientParams, SmartApi.UserSession) {
-	var params clientParams
+func authenticate(f string) (*SmartApi.Client, h.ClientParams, SmartApi.UserSession) {
+	var params h.ClientParams
 	file, err := os.Open(f)
 	if err != nil {
 		fmt.Println("Unable to open File %v", err)
@@ -137,7 +86,7 @@ func main() {
 		market.MonitorOrders(ABClient, authParams, session, client)
 	}
 
-	if false {
+	if true {
 		order.OrderBook(ABClient, authParams, session)
 	}
 	if false {
