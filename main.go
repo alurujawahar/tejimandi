@@ -70,7 +70,6 @@ func authenticate(f string) (*SmartApi.Client, h.ClientParams, SmartApi.UserSess
 func main() {
 	stocksFilePath := "/Users/alurujawahar/Desktop/angel/tejimandi/stocks.json"
 	filepath := "/Users/alurujawahar/Desktop/angel/tejimandi/keys.json"
-	placeorder := true
 	
 	client := db.ConnectMongo()
 
@@ -78,7 +77,7 @@ func main() {
 	ABClient, authParams, session := authenticate(filepath)
 
 	//Place Bulk Order
-	if placeorder {
+	if true {
 		order.PlaceBulkOrder(ABClient, stocksFilePath, "NSE", client)
 	}
 
@@ -86,9 +85,9 @@ func main() {
 		market.MonitorOrders(ABClient, authParams, session, client)
 	}
 
-	if true {
-		order.OrderBook(ABClient, authParams, session)
-	}
+	// if true {
+	// 	order.OrderBook(ABClient, authParams, session)
+	// }
 	if false {
 		var ListParams []SmartApi.OrderParams
 		instrument_list := token.GetInstrumentList()
