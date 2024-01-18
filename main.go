@@ -76,11 +76,10 @@ func main() {
 	//Get Authenticated
 	ABClient, authParams, session := authenticate(filepath)
 
-	hour, min, _ := time.Now().Clock()
-
-	if (hour > 9 && min > 15) && (hour < 15 && min < 15) {
+	hour, _, _ := time.Now().Clock()
+	if (hour >= 9) && (hour <= 15) {
 		//Place Bulk Order
-		if false {
+		if true {
 			order.PlaceBulkOrder(ABClient, stocksFilePath, "NSE", client)
 		}
 
@@ -91,7 +90,7 @@ func main() {
 		// if true {
 		// 	order.OrderBook(ABClient, authParams, session)
 		// }
-		
+
 		if false {
 			var ListParams []SmartApi.OrderParams
 			instrument_list := token.GetInstrumentList()

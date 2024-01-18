@@ -12,7 +12,7 @@
       "squareoff": "0",
       "stoploss": "0",
       "quantity": "1",
-      "executed": true
+      "executed": false
    },
    {
       "variety": "NORMAL",
@@ -27,7 +27,7 @@
       "squareoff": "0",
       "stoploss": "0",
       "quantity": "1",
-      "executed": true
+      "executed": false
    },
    {
       "variety": "NORMAL",
@@ -42,7 +42,7 @@
       "squareoff": "0",
       "stoploss": "0",
       "quantity": "1",
-      "executed": true
+      "executed": false
    },
    {
       "variety": "NORMAL",
@@ -57,7 +57,7 @@
       "squareoff": "0",
       "stoploss": "0",
       "quantity": "1",
-      "executed": true
+      "executed": false
    },
    {
       "variety": "NORMAL",
@@ -72,7 +72,7 @@
       "squareoff": "0",
       "stoploss": "0",
       "quantity": "1",
-      "executed": true
+      "executed": false
    },
    {
       "variety": "NORMAL",
@@ -87,7 +87,7 @@
       "squareoff": "0",
       "stoploss": "0",
       "quantity": "1",
-      "executed": true
+      "executed": false
    },
    {
       "variety": "NORMAL",
@@ -102,7 +102,7 @@
       "squareoff": "0",
       "stoploss": "0",
       "quantity": "1",
-      "executed": true
+      "executed": false
    },
    {
       "variety": "NORMAL",
@@ -117,7 +117,7 @@
       "squareoff": "0",
       "stoploss": "0",
       "quantity": "1",
-      "executed": true
+      "executed": false
    },
    {
       "variety": "NORMAL",
@@ -132,7 +132,7 @@
       "squareoff": "0",
       "stoploss": "0",
       "quantity": "1",
-      "executed": true
+      "executed": false
    },
    {
       "variety": "NORMAL",
@@ -147,7 +147,7 @@
       "squareoff": "0",
       "stoploss": "0",
       "quantity": "1",
-      "executed": true
+      "executed": false
    },
    {
       "variety": "NORMAL",
@@ -162,7 +162,7 @@
       "squareoff": "0",
       "stoploss": "0",
       "quantity": "1",
-      "executed": true
+      "executed": false
    },
    {
       "variety": "NORMAL",
@@ -177,7 +177,7 @@
       "squareoff": "0",
       "stoploss": "0",
       "quantity": "1",
-      "executed": true
+      "executed": false
    },
    {
       "variety": "NORMAL",
@@ -192,7 +192,7 @@
       "squareoff": "0",
       "stoploss": "0",
       "quantity": "1",
-      "executed": true
+      "executed": false
    },
    {
       "variety": "NORMAL",
@@ -207,7 +207,7 @@
       "squareoff": "0",
       "stoploss": "0",
       "quantity": "1",
-      "executed": true
+      "executed": false
    },
    {
       "variety": "NORMAL",
@@ -222,7 +222,7 @@
       "squareoff": "0",
       "stoploss": "0",
       "quantity": "1",
-      "executed": true
+      "executed": false
    },
    {
       "variety": "NORMAL",
@@ -237,6 +237,6 @@
       "squareoff": "0",
       "stoploss": "0",
       "quantity": "1",
-      "executed": true
+      "executed": false
    }
 ]

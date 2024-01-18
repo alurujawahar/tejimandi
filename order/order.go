@@ -8,10 +8,11 @@ import (
 	"log"
 	"os"
 	"strings"
+	"time"
 
+	h "github.com/alurujawahar/tejimandi/httpRequest"
 	SmartApi "github.com/angel-one/smartapigo"
 	"go.mongodb.org/mongo-driver/mongo"
-	h "github.com/alurujawahar/tejimandi/httpRequest"
 )
 
 // type ClientParams struct {
@@ -33,7 +34,6 @@ func OrderBook(A *SmartApi.Client, auth h.ClientParams, session SmartApi.UserSes
 func PlaceBulkOrder(A *SmartApi.Client, s string, exchange string, client *mongo.Client)  {
 	var OrderParams []SmartApi.OrderParams
 	var ltpParams SmartApi.LTPParams
-	// instrument_list := getInstrumentList()
 	res, err := os.Open(s)
 	if err != nil {
 		fmt.Println(err)
@@ -49,9 +49,6 @@ func PlaceBulkOrder(A *SmartApi.Client, s string, exchange string, client *mongo
 		fmt.Println("Unmarshal Failed:", err)
 	}
 	for _, stk := range OrderParams {
-		// token := tokenLookUp(stk.TradingSymbol, instrument_list, exchange)
-		// fmt.Println(stk.TradingSymbol, token)
-		// stk.SymbolToken = token
 		ltpParams.Exchange = exchange
 		ltpParams.SymbolToken = stk.SymbolToken
 		ltpParams.TradingSymbol = stk.TradingSymbol
@@ -61,18 +58,20 @@ func PlaceBulkOrder(A *SmartApi.Client, s string, exchange string, client *mongo
 		}
 		stk.Price = ltpResp.Ltp
 
-		if true {
-			fmt.Println("Placing Order for Stock: ", stk.TradingSymbol)
-			order, err := A.PlaceOrder(stk)
-			if err != nil {
-				fmt.Println(err)
-				return
+		if false {
+			if stk.Executed == false {
+				fmt.Println("Placing Order for Stock: ", stk.TradingSymbol)
+				order, err := A.PlaceOrder(stk)
+				if err != nil {
+					fmt.Println(err)
+					return
+				}
+				fmt.Println("Placed Order ID and Script :- ", order)
+				stk.Executed = true
 			}
-			fmt.Println("Placed Order ID and Script :- ", order)
-			stk.Executed = true
 		}
 
-		collection := client.Database("stocks").Collection("list")
+		collection := client.Database("stocks").Collection(time.Now().Format(time.DateOnly))
 		_, err = collection.InsertOne(context.Background(), stk)
 		if err != nil {
 			log.Fatal(err)

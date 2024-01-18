@@ -6,10 +6,10 @@ import (
 	"os"
 	"strings"
 
+	db "github.com/alurujawahar/tejimandi/database"
+	h "github.com/alurujawahar/tejimandi/httpRequest"
 	SmartApi "github.com/angel-one/smartapigo"
 	"go.mongodb.org/mongo-driver/mongo"
-	h "github.com/alurujawahar/tejimandi/httpRequest"
-	db "github.com/alurujawahar/tejimandi/database"
 )
 
 const stoploss = -0.2
@@ -80,6 +80,11 @@ func getValueChange(token string, symbol string, auth h.ClientParams, session Sm
 	return percentageChange
 }
 
+func calPercentageChange(symbol string, client *mongo.Client, currentPrice float64) float64 {
+	data, _ := db.QueryMongo(client, symbol)
+	percentageChangeFromDB := ((currentPrice - data.Price)/data.Price)*100
+	return percentageChangeFromDB
+}
 
 func MonitorOrders(A *SmartApi.Client, auth h.ClientParams, session SmartApi.UserSession, client *mongo.Client) {
 	loopvar := 1
@@ -99,7 +104,7 @@ func MonitorOrders(A *SmartApi.Client, auth h.ClientParams, session SmartApi.Use
 				fmt.Println("Net Value ", pos.NetValue)
 			}
 			fmt.Println(pos.SymbolToken)
-			percentChange := getValueChange(pos.SymbolToken, pos.Tradingsymbol, auth, session)
+			// percentChange := getValueChange(pos.SymbolToken, pos.Tradingsymbol, auth, session)
 			ltpparams.Exchange = pos.Exchange
 			ltpparams.SymbolToken = pos.SymbolToken
 			ltpparams.TradingSymbol = pos.Tradingsymbol
@@ -107,6 +112,7 @@ func MonitorOrders(A *SmartApi.Client, auth h.ClientParams, session SmartApi.Use
 			if err != nil {
 				fmt.Println("unable to get Ltp for:", pos.Tradingsymbol, ltp)
 			}
+			percentChange := calPercentageChange(pos.Tradingsymbol, client, ltp.Ltp)
 			data, objectId := db.QueryMongo(client, pos.Tradingsymbol)
 			if percentChange < stoploss && data.Executed {
 				exitParams.Exchange = pos.Exchange
@@ -122,7 +128,7 @@ func MonitorOrders(A *SmartApi.Client, auth h.ClientParams, session SmartApi.Use
 				exitParams.Price = ltp.Ltp
 				exitParams.TransactionType = "SELL"
 				exitParams.Executed = false
-				if true {
+				if false {
 					orderResponse, err := A.PlaceOrder(exitParams)
 					if err != nil {
 						fmt.Println("Failed to exit position", err)
@@ -130,8 +136,10 @@ func MonitorOrders(A *SmartApi.Client, auth h.ClientParams, session SmartApi.Use
 					fmt.Println("Successfully exited trading Symbol", pos.Tradingsymbol, orderResponse.Script, orderResponse.OrderID)
 				}
 				fmt.Println("object ID:", objectId["_id"])
+				//Updates Mongo with key executed "false" based on objectId
 				db.UpdateMongo(client, objectId)
 			}
+			// what if the condition is false?
 			session.UserSessionTokens, err = A.RenewAccessToken(session.RefreshToken)
 			if err != nil {
 				fmt.Println("failed to refresh token:", err)
