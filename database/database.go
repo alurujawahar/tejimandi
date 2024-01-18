@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"time"
 
 	SmartApi "github.com/angel-one/smartapigo"
 	"go.mongodb.org/mongo-driver/bson"
@@ -14,7 +15,7 @@ const mongoUrl = "mongodb://localhost:27017"
 
 func QueryMongo(client *mongo.Client, tradingSymbol string) (SmartApi.OrderParams, bson.M){
 	// Access a MongoDB collection
-	collection := client.Database("stocks").Collection("list")
+	collection := client.Database("stocks").Collection(time.Now().Format(time.DateOnly))
 
 	// Define a filter for the query
 	filter := bson.D{{Key: "tradingsymbol", Value: bson.D{{Key: "$eq", Value: tradingSymbol}}}}
@@ -46,15 +47,16 @@ func QueryMongo(client *mongo.Client, tradingSymbol string) (SmartApi.OrderParam
 	return result, objectId
 }
 
-func UpdateMongo(client *mongo.Client, _id bson.M) {
-	collection := client.Database("stocks").Collection("list")
+func UpdateMongoAsExecuted(client *mongo.Client, _id bson.M, price float64, executed bool) {
+	collection := client.Database("stocks").Collection(time.Now().Format(time.DateOnly))
 
     // Define the filter based on the document's _id
     filter := bson.D{{Key: "_id", Value: _id["_id"]}} // Replace with the actual _id
 
     // Define the update to be performed
     update := bson.D{
-        {Key: "$set", Value: bson.D{{Key: "executed", Value: false}}}, 
+        {Key: "$set", Value: bson.D{{Key: "executed", Value: executed}}},
+		{Key: "$set", Value: bson.D{{Key: "price", Value: price}}}, 
     }
 
     // Perform the update

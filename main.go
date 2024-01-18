@@ -82,15 +82,12 @@ func main() {
 		if true {
 			order.PlaceBulkOrder(ABClient, stocksFilePath, "NSE", client)
 		}
-
 		if false {
 			market.MonitorOrders(ABClient, authParams, session, client)
 		}
-
 		// if true {
 		// 	order.OrderBook(ABClient, authParams, session)
 		// }
-
 		if false {
 			var ListParams []SmartApi.OrderParams
 			instrument_list := token.GetInstrumentList()

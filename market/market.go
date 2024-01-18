@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"strconv"
 	"strings"
 
 	db "github.com/alurujawahar/tejimandi/database"
@@ -114,6 +115,8 @@ func MonitorOrders(A *SmartApi.Client, auth h.ClientParams, session SmartApi.Use
 			}
 			percentChange := calPercentageChange(pos.Tradingsymbol, client, ltp.Ltp)
 			data, objectId := db.QueryMongo(client, pos.Tradingsymbol)
+
+			//Sell stocks if they are less than stoploss
 			if percentChange < stoploss && data.Executed {
 				exitParams.Exchange = pos.Exchange
 				exitParams.Variety = "NORMAL"
@@ -137,9 +140,45 @@ func MonitorOrders(A *SmartApi.Client, auth h.ClientParams, session SmartApi.Use
 				}
 				fmt.Println("object ID:", objectId["_id"])
 				//Updates Mongo with key executed "false" based on objectId
-				db.UpdateMongo(client, objectId)
+				db.UpdateMongoAsExecuted(client, objectId, ltp.Ltp, false)
 			}
-			// what if the condition is false?
+			
+			// Buy increase the quantity of the stocks which are performing
+			if percentChange > stoploss && data.Executed {
+				//Get Balance in the account
+				account, err := A.GetRMS()
+				if err != nil {
+					fmt.Println(err)
+				}
+				availableFunds, err := strconv.ParseFloat(account.AvailableCash, 64)
+				fmt.Println("Available funds are:", availableFunds)
+
+				// Check balance and place order
+				if availableFunds >= ltp.Ltp {
+					stk := SmartApi.OrderParams{
+						Variety: data.Variety,
+						TradingSymbol: pos.Tradingsymbol,
+						SymbolToken: pos.SymbolToken,
+						TransactionType: "BUY",
+						Exchange: data.Exchange,
+						OrderType: data.OrderType,
+						ProductType: data.ProductType,
+						Duration: data.Duration,
+						Price: ltp.Ltp,
+						SquareOff: data.SquareOff,
+						StopLoss: data.StopLoss,
+						Quantity: "1",
+						Executed: true,
+					}
+					order, err := A.PlaceOrder(stk)
+					if err != nil {
+						fmt.Println("failed to place repeat order", err)
+					}
+					fmt.Println("Placed repeat orderer with Order ID and Script :- ", order)
+					db.UpdateMongoAsExecuted(client, objectId, ltp.Ltp, true)
+				}
+			}
+			
 			session.UserSessionTokens, err = A.RenewAccessToken(session.RefreshToken)
 			if err != nil {
 				fmt.Println("failed to refresh token:", err)
