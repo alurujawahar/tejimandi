@@ -76,33 +76,40 @@ func main() {
 	//Get Authenticated
 	ABClient, authParams, session := authenticate(filepath)
 
-	//Place Bulk Order
-	if true {
-		order.PlaceBulkOrder(ABClient, stocksFilePath, "NSE", client)
-	}
+	hour, min, _ := time.Now().Clock()
 
-	if true {
-		market.MonitorOrders(ABClient, authParams, session, client)
-	}
+	if (hour > 9 && min > 15) && (hour < 15 && min < 15) {
+		//Place Bulk Order
+		if false {
+			order.PlaceBulkOrder(ABClient, stocksFilePath, "NSE", client)
+		}
 
-	// if true {
-	// 	order.OrderBook(ABClient, authParams, session)
-	// }
-	if false {
-		var ListParams []SmartApi.OrderParams
-		instrument_list := token.GetInstrumentList()
-		res, err := os.Open(stocksFilePath)
-		if err != nil {
-			fmt.Println(err)
+		if false {
+			market.MonitorOrders(ABClient, authParams, session, client)
 		}
-		content, err := io.ReadAll(res)
-		if err != nil {
-			fmt.Println(err)
+
+		// if true {
+		// 	order.OrderBook(ABClient, authParams, session)
+		// }
+		
+		if false {
+			var ListParams []SmartApi.OrderParams
+			instrument_list := token.GetInstrumentList()
+			res, err := os.Open(stocksFilePath)
+			if err != nil {
+				fmt.Println(err)
+			}
+			content, err := io.ReadAll(res)
+			if err != nil {
+				fmt.Println(err)
+			}
+			json.Unmarshal(content, &ListParams)
+			for _, list := range ListParams {
+				token := token.TokenLookUp(list.TradingSymbol , instrument_list, "NSE" )
+				fmt.Println(list.TradingSymbol, token )
+			}
 		}
-		json.Unmarshal(content, &ListParams)
-		for _, list := range ListParams {
-			token := token.TokenLookUp(list.TradingSymbol , instrument_list, "NSE" )
-			fmt.Println(list.TradingSymbol, token )
-		}
+	} else {
+		fmt.Println("Can't trade since out of market hours")
 	}
 }
