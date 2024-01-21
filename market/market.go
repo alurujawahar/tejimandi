@@ -164,9 +164,9 @@ func MonitorOrders(A *SmartApi.Client, auth h.ClientParams, session SmartApi.Use
 			}
 			//Calculate New ATP based on present LTP
 			newATP := calNewATP(ltp.Ltp, pos.NetQty, pos.AverageNetPrice)
-			percentChange = calPercentageChange(ltp.Ltp, newATP)
+			percentChangeWithNewATP := calPercentageChange(ltp.Ltp, newATP)
 			// Buy increase the quantity of the stocks which are performing
-			if (percentChange > stoploss && data.Executed) || (ltpPercentageChange > 0.1 && data.Executed == false) {
+			if (percentChange > percentChangeWithNewATP && percentChange > stoploss && data.Executed) || (ltpPercentageChange > 0.1 && data.Executed == false) {
 				//Get Balance in the account
 				account, err := A.GetRMS()
 				if err != nil {
