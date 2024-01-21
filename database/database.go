@@ -47,7 +47,7 @@ func QueryMongo(client *mongo.Client, tradingSymbol string) (SmartApi.OrderParam
 	return result, objectId
 }
 
-func UpdateMongoAsExecuted(client *mongo.Client, _id bson.M, price float64, executed bool) {
+func UpdateMongoAsExecuted(client *mongo.Client, _id bson.M, price float64, executed bool, quantity int64) {
 	collection := client.Database("stocks").Collection(time.Now().Format(time.DateOnly))
 
     // Define the filter based on the document's _id
@@ -57,6 +57,7 @@ func UpdateMongoAsExecuted(client *mongo.Client, _id bson.M, price float64, exec
     update := bson.D{
         {Key: "$set", Value: bson.D{{Key: "executed", Value: executed}}},
 		{Key: "$set", Value: bson.D{{Key: "price", Value: price}}}, 
+		{Key: "$set", Value: bson.D{{Key: "quantity", Value: quantity}}},
     }
 
     // Perform the update

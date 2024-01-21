@@ -75,14 +75,13 @@ func main() {
 
 	//Get Authenticated
 	ABClient, authParams, session := authenticate(filepath)
-
 	hour, _, _ := time.Now().Clock()
 	if (hour >= 9) && (hour <= 15) {
 		//Place Bulk Order
 		if true {
 			order.PlaceBulkOrder(ABClient, stocksFilePath, "NSE", client)
 		}
-		if false {
+		if true {
 			market.MonitorOrders(ABClient, authParams, session, client)
 		}
 		// if true {

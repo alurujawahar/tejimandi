@@ -81,16 +81,14 @@ func getValueChange(token string, symbol string, auth h.ClientParams, session Sm
 	return percentageChange
 }
 
-func calPercentageChange(symbol string, client *mongo.Client, currentPrice float64) float64 {
-	data, _ := db.QueryMongo(client, symbol)
-	percentageChangeFromDB := ((currentPrice - data.Price)/data.Price)*100
-	return percentageChangeFromDB
+func calPercentageChange(currentPrice float64, avgTradePrice string) float64 {
+	atp, _ := strconv.ParseFloat(avgTradePrice, 64)
+	percentageChangeFromAtp := ((currentPrice - atp)/atp)*100
+	return percentageChangeFromAtp
 }
 
 func MonitorOrders(A *SmartApi.Client, auth h.ClientParams, session SmartApi.UserSession, client *mongo.Client) {
 	loopvar := 1
-	var exitParams SmartApi.OrderParams
-	var ltpparams SmartApi.LTPParams
 	for loopvar != 0 {
 		positions, err := A.GetPositions()
 		if err != nil {
@@ -98,53 +96,67 @@ func MonitorOrders(A *SmartApi.Client, auth h.ClientParams, session SmartApi.Use
 			os.Exit(1)
 		}
 		for _, pos := range positions {
+			fmt.Println("##############################################################################\n")
 			if err != nil {
-				fmt.Println(err.Error())
+				fmt.Println("err:", err)
 			}
-			if pos.ProductType == "INTRADAY" {
-				fmt.Println("Net Value ", pos.NetValue)
+			if pos.ProductType == "INTRADAY" && pos.NetQty != "0" {
+				fmt.Printf("Symbol: %s : ATP Value: %s, Net Price: %s\n", pos.Tradingsymbol, pos.AverageNetPrice, pos.NetPrice)
 			}
-			fmt.Println(pos.SymbolToken)
-			// percentChange := getValueChange(pos.SymbolToken, pos.Tradingsymbol, auth, session)
-			ltpparams.Exchange = pos.Exchange
-			ltpparams.SymbolToken = pos.SymbolToken
-			ltpparams.TradingSymbol = pos.Tradingsymbol
+
+			ltpPercentageChange := getValueChange(pos.SymbolToken, pos.Tradingsymbol, auth, session)
+			ltpparams := SmartApi.LTPParams{
+				Exchange: pos.Exchange,
+				SymbolToken: pos.SymbolToken,
+				TradingSymbol: pos.Tradingsymbol,
+			}
 			ltp, err := A.GetLTP(ltpparams)
 			if err != nil {
 				fmt.Println("unable to get Ltp for:", pos.Tradingsymbol, ltp)
 			}
-			percentChange := calPercentageChange(pos.Tradingsymbol, client, ltp.Ltp)
+			fmt.Println("LTP:", ltp.Ltp)	
+
+			percentChange := calPercentageChange(ltp.Ltp, pos.AverageNetPrice)
+			fmt.Printf("percentage change of %s is %.2f :", pos.Tradingsymbol, percentChange)
+
 			data, objectId := db.QueryMongo(client, pos.Tradingsymbol)
 
+			if !(data.Executed == false && pos.NetQty == "0") {
+				fmt.Errorf("There is a mismatch of the Quantity with posistion and Data", pos.Tradingsymbol)
+				continue
+			}
 			//Sell stocks if they are less than stoploss
 			if percentChange < stoploss && data.Executed {
-				exitParams.Exchange = pos.Exchange
-				exitParams.Variety = "NORMAL"
-				exitParams.TradingSymbol = pos.Tradingsymbol
-				exitParams.SymbolToken = pos.SymbolToken
-				exitParams.OrderType = "LIMIT" 
-				exitParams.ProductType = "INTRADAY"
-				exitParams.Duration = "DAY"
-				exitParams.SquareOff = "0"
-				exitParams.StopLoss = "0"
-				exitParams.Quantity = "1"
-				exitParams.Price = ltp.Ltp
-				exitParams.TransactionType = "SELL"
-				exitParams.Executed = false
-				if false {
+				exitParams := SmartApi.OrderParams{
+					Exchange: pos.Exchange,
+					Variety: "NORMAL",
+					TradingSymbol: pos.Tradingsymbol,
+					SymbolToken: pos.SymbolToken,
+					OrderType: "LIMIT",
+					ProductType: "INTRADAY",
+					Duration: "DAY",
+					SquareOff: "0",
+					StopLoss: "0",
+					Quantity: pos.NetQty,
+					Price: ltp.Ltp,
+					TransactionType: "SELL",
+					Executed: false,
+				}
+				if true {
 					orderResponse, err := A.PlaceOrder(exitParams)
 					if err != nil {
 						fmt.Println("Failed to exit position", err)
 					}
 					fmt.Println("Successfully exited trading Symbol", pos.Tradingsymbol, orderResponse.Script, orderResponse.OrderID)
+				
+					fmt.Printf("object ID of Symbol %s is %s:", pos.Tradingsymbol, objectId["_id"])
+					//Updates Mongo with key executed "false" based on objectId
+					db.UpdateMongoAsExecuted(client, objectId, ltp.Ltp, false, 0)
 				}
-				fmt.Println("object ID:", objectId["_id"])
-				//Updates Mongo with key executed "false" based on objectId
-				db.UpdateMongoAsExecuted(client, objectId, ltp.Ltp, false)
 			}
 			
 			// Buy increase the quantity of the stocks which are performing
-			if percentChange > stoploss && data.Executed {
+			if (percentChange > stoploss && data.Executed) || (ltpPercentageChange > 0.1 && data.Executed == false) {
 				//Get Balance in the account
 				account, err := A.GetRMS()
 				if err != nil {
@@ -161,7 +173,7 @@ func MonitorOrders(A *SmartApi.Client, auth h.ClientParams, session SmartApi.Use
 						SymbolToken: pos.SymbolToken,
 						TransactionType: "BUY",
 						Exchange: data.Exchange,
-						OrderType: data.OrderType,
+						OrderType: "LIMIT",
 						ProductType: data.ProductType,
 						Duration: data.Duration,
 						Price: ltp.Ltp,
@@ -170,12 +182,15 @@ func MonitorOrders(A *SmartApi.Client, auth h.ClientParams, session SmartApi.Use
 						Quantity: "1",
 						Executed: true,
 					}
-					order, err := A.PlaceOrder(stk)
-					if err != nil {
-						fmt.Println("failed to place repeat order", err)
+					if true {
+						order, err := A.PlaceOrder(stk)
+						if err != nil {
+							fmt.Println("failed to place repeat order", err)
+						}
+						fmt.Println("Placed repeat orderer with Order ID and Script :- ", order)
+						quantity, _ := strconv.ParseInt(pos.NetQty, 10, 64)
+						db.UpdateMongoAsExecuted(client, objectId, ltp.Ltp, true, quantity + 1)
 					}
-					fmt.Println("Placed repeat orderer with Order ID and Script :- ", order)
-					db.UpdateMongoAsExecuted(client, objectId, ltp.Ltp, true)
 				}
 			}
 			
@@ -183,6 +198,7 @@ func MonitorOrders(A *SmartApi.Client, auth h.ClientParams, session SmartApi.Use
 			if err != nil {
 				fmt.Println("failed to refresh token:", err)
 			}
+			fmt.Println("##############################################################################\n")
 		}
 		loopvar = len(positions)	
 	}

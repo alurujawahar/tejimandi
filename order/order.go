@@ -58,7 +58,7 @@ func PlaceBulkOrder(A *SmartApi.Client, s string, exchange string, client *mongo
 		}
 		stk.Price = ltpResp.Ltp
 
-		if false {
+		if true {
 			if stk.Executed == false {
 				fmt.Println("Placing Order for Stock: ", stk.TradingSymbol)
 				order, err := A.PlaceOrder(stk)
