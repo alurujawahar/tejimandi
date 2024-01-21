@@ -87,6 +87,14 @@ func calPercentageChange(currentPrice float64, avgTradePrice string) float64 {
 	return percentageChangeFromAtp
 }
 
+func calNewATP(ltp float64, presentQuantity string, presentATP string) string {
+	quantity, _ := strconv.ParseFloat(presentQuantity, 64)
+	ATP, _ := strconv.ParseFloat(presentATP, 64)
+	// return (ltp + quantity*ATP)/(quantity + 1)
+	s := fmt.Sprintf("%f", (ltp + quantity*ATP)/(quantity + 1))
+	return s
+}
+
 func MonitorOrders(A *SmartApi.Client, auth h.ClientParams, session SmartApi.UserSession, client *mongo.Client) {
 	loopvar := 1
 	for loopvar != 0 {
@@ -154,7 +162,9 @@ func MonitorOrders(A *SmartApi.Client, auth h.ClientParams, session SmartApi.Use
 					db.UpdateMongoAsExecuted(client, objectId, ltp.Ltp, false, 0)
 				}
 			}
-			
+			//Calculate New ATP based on present LTP
+			newATP := calNewATP(ltp.Ltp, pos.NetQty, pos.AverageNetPrice)
+			percentChange = calPercentageChange(ltp.Ltp, newATP)
 			// Buy increase the quantity of the stocks which are performing
 			if (percentChange > stoploss && data.Executed) || (ltpPercentageChange > 0.1 && data.Executed == false) {
 				//Get Balance in the account
