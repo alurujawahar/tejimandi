@@ -103,6 +103,7 @@ func MonitorOrders(A *SmartApi.Client, auth h.ClientParams, session SmartApi.Use
 			fmt.Println("Error getting your Positions", err)
 			os.Exit(1)
 		}
+		fmt.Println("length of Positions", len(positions))
 		for _, pos := range positions {
 			fmt.Println("##############################################################################\n")
 			if err != nil {
