@@ -91,7 +91,7 @@ func calNewATP(ltp float64, presentQuantity string, presentATP string) string {
 	quantity, _ := strconv.ParseFloat(presentQuantity, 64)
 	ATP, _ := strconv.ParseFloat(presentATP, 64)
 	// return (ltp + quantity*ATP)/(quantity + 1)
-	s := fmt.Sprintf("%f", (ltp + quantity*ATP)/(quantity + 1))
+	s := fmt.Sprintf("%.2f", (ltp + quantity*ATP)/(quantity + 1))
 	return s
 }
 
@@ -113,7 +113,7 @@ func MonitorOrders(A *SmartApi.Client, auth h.ClientParams, session SmartApi.Use
 				fmt.Printf("Symbol: %s : ATP Value: %s, Net Price: %s\n", pos.Tradingsymbol, pos.AverageNetPrice, pos.NetPrice)
 			}
 
-			ltpPercentageChange := getValueChange(pos.SymbolToken, pos.Tradingsymbol, auth, session)
+			// ltpPercentageChange := getValueChange(pos.SymbolToken, pos.Tradingsymbol, auth, session)
 			ltpparams := SmartApi.LTPParams{
 				Exchange: pos.Exchange,
 				SymbolToken: pos.SymbolToken,
@@ -126,7 +126,7 @@ func MonitorOrders(A *SmartApi.Client, auth h.ClientParams, session SmartApi.Use
 			fmt.Println("LTP:", ltp.Ltp)	
 
 			percentChange := calPercentageChange(ltp.Ltp, pos.AverageNetPrice)
-			fmt.Printf("percentage change of %s is %.	2f \n:", pos.Tradingsymbol, percentChange)
+			fmt.Printf("percentage change of %s is %v \n:", pos.Tradingsymbol, percentChange)
 
 			data, objectId := db.QueryMongo(client, pos.Tradingsymbol)
 
@@ -168,7 +168,7 @@ func MonitorOrders(A *SmartApi.Client, auth h.ClientParams, session SmartApi.Use
 			fmt.Println("Percentage Change with new ATP is: ", percentChangeWithNewATP)
 
 			// Buy increase the quantity of the stocks which are performing
-			if (percentChangeWithNewATP > percentChange && percentChange > stoploss && data.Executed) || (ltpPercentageChange > 0.1 && data.Executed == false) {
+			if (percentChangeWithNewATP > percentChange && percentChange > stoploss && data.Executed)  {
 				//Get Balance in the account
 				account, err := A.GetRMS()
 				if err != nil {
