@@ -47,7 +47,7 @@ func QueryMongo(client *mongo.Client, tradingSymbol string) (SmartApi.OrderParam
 	return result, objectId
 }
 
-func UpdateMongoAsExecuted(client *mongo.Client, _id bson.M, price float64, executed bool, quantity int64) {
+func UpdateMongoAsExecuted(client *mongo.Client, _id bson.M, price float64, executed bool, quantity string) {
 	collection := client.Database("stocks").Collection(time.Now().Format(time.DateOnly))
 
     // Define the filter based on the document's _id
@@ -63,7 +63,7 @@ func UpdateMongoAsExecuted(client *mongo.Client, _id bson.M, price float64, exec
     // Perform the update
     result, err := collection.UpdateOne(context.Background(), filter, update)
     if err != nil {
-        log.Fatal(err)
+        fmt.Println("Error at DB", err)
     }
 
     fmt.Printf("Matched %v document(s) and modified %v document(s)\n", result.MatchedCount, result.ModifiedCount)

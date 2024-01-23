@@ -126,14 +126,14 @@ func MonitorOrders(A *SmartApi.Client, auth h.ClientParams, session SmartApi.Use
 			fmt.Println("LTP:", ltp.Ltp)	
 
 			percentChange := calPercentageChange(ltp.Ltp, pos.AverageNetPrice)
-			fmt.Printf("percentage change of %s is %.2f :", pos.Tradingsymbol, percentChange)
+			fmt.Printf("percentage change of %s is %.	2f \n:", pos.Tradingsymbol, percentChange)
 
 			data, objectId := db.QueryMongo(client, pos.Tradingsymbol)
 
-			if !(data.Executed == false && pos.NetQty == "0") {
-				fmt.Errorf("There is a mismatch of the Quantity with posistion and Data", pos.Tradingsymbol)
-				continue
-			}
+			// if !(data.Executed == false && pos.NetQty == "0") {
+			// 	fmt.Errorf("There is a mismatch of the Quantity with posistion and Data", pos.Tradingsymbol)
+			// 	continue
+			// }
 			//Sell stocks if they are less than stoploss
 			if percentChange < stoploss && data.Executed {
 				exitParams := SmartApi.OrderParams{
@@ -160,7 +160,7 @@ func MonitorOrders(A *SmartApi.Client, auth h.ClientParams, session SmartApi.Use
 				
 					fmt.Printf("object ID of Symbol %s is %s:", pos.Tradingsymbol, objectId["_id"])
 					//Updates Mongo with key executed "false" based on objectId
-					db.UpdateMongoAsExecuted(client, objectId, ltp.Ltp, false, 0)
+					db.UpdateMongoAsExecuted(client, objectId, ltp.Ltp, false, "0")
 				}
 			}
 			//Calculate New ATP based on present LTP
@@ -169,7 +169,7 @@ func MonitorOrders(A *SmartApi.Client, auth h.ClientParams, session SmartApi.Use
 			fmt.Println("Percentage Change with new ATP is: ", percentChangeWithNewATP)
 
 			// Buy increase the quantity of the stocks which are performing
-			if (percentChange > percentChangeWithNewATP && percentChange > stoploss && data.Executed) || (ltpPercentageChange > 0.1 && data.Executed == false) {
+			if (percentChangeWithNewATP > percentChange && percentChange > stoploss && data.Executed) || (ltpPercentageChange > 0.1 && data.Executed == false) {
 				//Get Balance in the account
 				account, err := A.GetRMS()
 				if err != nil {
@@ -201,8 +201,12 @@ func MonitorOrders(A *SmartApi.Client, auth h.ClientParams, session SmartApi.Use
 							fmt.Println("failed to place repeat order", err)
 						}
 						fmt.Println("Placed repeat orderer with Order ID and Script :- ", order)
-						quantity, _ := strconv.ParseInt(pos.NetQty, 10, 64)
-						db.UpdateMongoAsExecuted(client, objectId, ltp.Ltp, true, quantity + 1)
+						OldQuantity, err := strconv.ParseInt(pos.NetQty, 10, 64)
+						if err != nil {
+							fmt.Println("Error:", err)
+						}
+						newQuantity := fmt.Sprint(OldQuantity + 1)
+						db.UpdateMongoAsExecuted(client, objectId, ltp.Ltp, true, newQuantity)
 					}
 				}
 			}
