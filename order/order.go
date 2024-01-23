@@ -52,11 +52,11 @@ func PlaceBulkOrder(A *SmartApi.Client, s string, exchange string, client *mongo
 		ltpParams.Exchange = exchange
 		ltpParams.SymbolToken = stk.SymbolToken
 		ltpParams.TradingSymbol = stk.TradingSymbol
-		ltpResp, err := A.GetLTP(ltpParams)
+		// ltpResp, err := A.GetLTP(ltpParams)
 		if err != nil {
 			fmt.Println(err)
 		}
-		stk.Price = ltpResp.Ltp
+		// stk.Price = ltpResp.Ltp
 
 		if true {
 			if stk.Executed == false {

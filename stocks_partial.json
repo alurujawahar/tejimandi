@@ -1,0 +1,47 @@
+[
+   {
+      "variety": "NORMAL",
+      "tradingsymbol": "BANKBARODA-EQ",
+      "symboltoken": "4668",
+      "transactiontype": "BUY",
+      "exchange": "NSE",
+      "ordertype": "MARKET",
+      "producttype": "INTRADAY",
+      "duration": "DAY",
+      "price": "",
+      "squareoff": "0",
+      "stoploss": "0",
+      "quantity": "1",
+      "executed": false
+   },
+   {
+      "variety": "NORMAL",
+      "tradingsymbol": "NBCC-EQ",
+      "symboltoken": "31415",
+      "transactiontype": "BUY",
+      "exchange": "NSE",
+      "ordertype": "MARKET",
+      "producttype": "INTRADAY",
+      "duration": "DAY",
+      "price": "",
+      "squareoff": "0",
+      "stoploss": "0",
+      "quantity": "1",
+      "executed": false
+   },
+   {
+      "variety": "NORMAL",
+      "tradingsymbol": "ACI-EQ",
+      "symboltoken": "12024",
+      "transactiontype": "BUY",
+      "exchange": "NSE",
+      "ordertype": "MARKET",
+      "producttype": "INTRADAY",
+      "duration": "DAY",
+      "price": "",
+      "squareoff": "0",
+      "stoploss": "0",
+      "quantity": "1",
+      "executed": false
+   }
+]
