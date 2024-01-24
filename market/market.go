@@ -112,6 +112,9 @@ func MonitorOrders(A *SmartApi.Client, auth h.ClientParams, session SmartApi.Use
 			if pos.ProductType == "INTRADAY" && pos.NetQty != "0" {
 				fmt.Printf("Symbol: %s : ATP Value: %s, Net Price: %s\n", pos.Tradingsymbol, pos.AverageNetPrice, pos.NetPrice)
 			}
+			if pos.ProductType == "INTRADAY" && pos.NetQty == "0" {
+				continue
+			}
 
 			// ltpPercentageChange := getValueChange(pos.SymbolToken, pos.Tradingsymbol, auth, session)
 			ltpparams := SmartApi.LTPParams{
