@@ -168,7 +168,7 @@ func MonitorOrders(A *SmartApi.Client, auth h.ClientParams, session SmartApi.Use
 			fmt.Println("Percentage Change with new ATP is: ", percentChangeWithNewATP)
 
 			// Buy increase the quantity of the stocks which are performing
-			if (percentChangeWithNewATP > percentChange && percentChange > stoploss && data.Executed)  {
+			if (percentChangeWithNewATP > percentChange && percentChangeWithNewATP > 0   && percentChange > stoploss && data.Executed)  {
 				//Get Balance in the account
 				account, err := A.GetRMS()
 				if err != nil {
