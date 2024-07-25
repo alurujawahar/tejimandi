@@ -81,7 +81,7 @@ func main() {
 		if true {
 			order.PlaceBulkOrder(ABClient, stocksFilePath, "NSE", client)
 		}
-		if true {
+		if false {
 			market.MonitorOrders(ABClient, authParams, session, client)
 		}
 		// if true {

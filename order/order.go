@@ -1,14 +1,14 @@
 package order
 
 import (
-	"context"
+	// "context"
 	"encoding/json"
 	"fmt"
 	"io"
-	"log"
+	// "log"
 	"os"
 	"strings"
-	"time"
+	// "time"
 
 	h "github.com/alurujawahar/tejimandi/httpRequest"
 	SmartApi "github.com/angel-one/smartapigo"
@@ -52,11 +52,16 @@ func PlaceBulkOrder(A *SmartApi.Client, s string, exchange string, client *mongo
 		ltpParams.Exchange = exchange
 		ltpParams.SymbolToken = stk.SymbolToken
 		ltpParams.TradingSymbol = stk.TradingSymbol
-		// ltpResp, err := A.GetLTP(ltpParams)
+		ltpResp, err := A.GetLTP(ltpParams)
 		if err != nil {
 			fmt.Println(err)
 		}
-		// stk.Price = ltpResp.Ltp
+		stk.Price = ltpResp.Ltp
+
+		if stk.ProductType == "BO" {
+			stk.SquareOff = fmt.Sprintf("%.f",ltpResp.Ltp * 1.10)
+			stk.StopLoss = fmt.Sprintf("%.f",ltpResp.Ltp * 0.99)
+		}
 
 		if true {
 			if stk.Executed == false {
@@ -71,10 +76,10 @@ func PlaceBulkOrder(A *SmartApi.Client, s string, exchange string, client *mongo
 			}
 		}
 
-		collection := client.Database("stocks").Collection(time.Now().Format(time.DateOnly))
-		_, err = collection.InsertOne(context.Background(), stk)
-		if err != nil {
-			log.Fatal(err)
-		}	
+		// collection := client.Database("stocks").Collection(time.Now().Format(time.DateOnly))
+		// _, err = collection.InsertOne(context.Background(), stk)
+		// if err != nil {
+		// 	log.Fatal(err)
+		// }	
 	}
 }

@@ -6,7 +6,7 @@
       "transactiontype": "BUY",
       "exchange": "NSE",
       "ordertype": "MARKET",
-      "producttype": "INTRADAY",
+      "producttype": "BO",
       "duration": "DAY",
       "price": 0.0,
       "squareoff": "0",
