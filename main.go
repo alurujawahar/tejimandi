@@ -9,10 +9,11 @@ import (
 	SmartApi "github.com/angel-one/smartapigo"
 	"github.com/pquerna/otp/totp"
 	token "github.com/alurujawahar/tejimandi/token"
-	order "github.com/alurujawahar/tejimandi/order"
-	db "github.com/alurujawahar/tejimandi/database"
-	market "github.com/alurujawahar/tejimandi/market"
+	// order "github.com/alurujawahar/tejimandi/order"
+	// db "github.com/alurujawahar/tejimandi/database"
+	// market "github.com/alurujawahar/tejimandi/market"
 	h "github.com/alurujawahar/tejimandi/httpRequest"
+	backtest "github.com/alurujawahar/tejimandi/backtest"
 )
 
 
@@ -71,18 +72,28 @@ func main() {
 	stocksFilePath := "/Users/alurujawahar/Desktop/angel/tejimandi/stocks.json"
 	filepath := "/Users/alurujawahar/Desktop/angel/tejimandi/keys.json"
 	
-	client := db.ConnectMongo()
+	// client := db.ConnectMongo()
 
 	//Get Authenticated
-	ABClient, authParams, session := authenticate(filepath)
+	_, authParams, session := authenticate(filepath)
+	if true {
+		symbols := []string{"RELIANCE"}
+		startDate := "2024-01-17 11:00"
+		endDate := "2024-02-17 11:00"
+		initialCapital := 100000.0
+
+		for _, symbol := range symbols {
+			backtest.BacktestSymbol(symbol, initialCapital, startDate, endDate, authParams.APIKey, session)
+		}
+	}
 	hour, _, _ := time.Now().Clock()
 	if (hour >= 9) && (hour <= 15) {
 		//Place Bulk Order
-		if true {
-			order.PlaceBulkOrder(ABClient, stocksFilePath, "NSE", client)
+		if false {
+			// order.PlaceBulkOrder(ABClient, stocksFilePath, "NSE", client)
 		}
 		if false {
-			market.MonitorOrders(ABClient, authParams, session, client)
+			// market.MonitorOrders(ABClient, authParams, session, client)
 		}
 		// if true {
 		// 	order.OrderBook(ABClient, authParams, session)
