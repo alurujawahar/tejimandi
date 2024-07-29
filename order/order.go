@@ -12,7 +12,6 @@ import (
 
 	h "github.com/alurujawahar/tejimandi/httpRequest"
 	SmartApi "github.com/angel-one/smartapigo"
-	"go.mongodb.org/mongo-driver/mongo"
 )
 
 // type ClientParams struct {
@@ -31,7 +30,7 @@ func OrderBook(A *SmartApi.Client, auth h.ClientParams, session SmartApi.UserSes
 }
 
 
-func PlaceBulkOrder(A *SmartApi.Client, s string, exchange string, client *mongo.Client)  {
+func PlaceBulkOrder(A *SmartApi.Client, s string, exchange string)  {
 	var OrderParams []SmartApi.OrderParams
 	var ltpParams SmartApi.LTPParams
 	res, err := os.Open(s)
@@ -59,8 +58,8 @@ func PlaceBulkOrder(A *SmartApi.Client, s string, exchange string, client *mongo
 		stk.Price = ltpResp.Ltp
 
 		if stk.ProductType == "BO" {
-			stk.SquareOff = fmt.Sprintf("%.f",ltpResp.Ltp * 1.10)
-			stk.StopLoss = fmt.Sprintf("%.f",ltpResp.Ltp * 0.99)
+			stk.SquareOff = fmt.Sprintf("%.2f",ltpResp.Ltp * 1.10)
+			stk.StopLoss = fmt.Sprintf("%.2f",ltpResp.Ltp * 0.98)
 		}
 
 		if true {
@@ -75,11 +74,5 @@ func PlaceBulkOrder(A *SmartApi.Client, s string, exchange string, client *mongo
 				stk.Executed = true
 			}
 		}
-
-		// collection := client.Database("stocks").Collection(time.Now().Format(time.DateOnly))
-		// _, err = collection.InsertOne(context.Background(), stk)
-		// if err != nil {
-		// 	log.Fatal(err)
-		// }	
 	}
 }

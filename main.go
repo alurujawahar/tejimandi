@@ -8,12 +8,12 @@ import (
 	"time"
 	SmartApi "github.com/angel-one/smartapigo"
 	"github.com/pquerna/otp/totp"
-	// token "github.com/alurujawahar/tejimandi/token"
-	// order "github.com/alurujawahar/tejimandi/order"
+	token "github.com/alurujawahar/tejimandi/token"
+	order "github.com/alurujawahar/tejimandi/order"
 	// db "github.com/alurujawahar/tejimandi/database"
 	// market "github.com/alurujawahar/tejimandi/market"
 	h "github.com/alurujawahar/tejimandi/httpRequest"
-	backtest "github.com/alurujawahar/tejimandi/backtest"
+	// backtest "github.com/alurujawahar/tejimandi/backtest"
 )
 
 
@@ -87,22 +87,12 @@ func main() {
 	// client := db.ConnectMongo()
 
 	//Get Authenticated
-	_, authParams, session := authenticate(filepath)
-	// if true {
-	// 	symbols := []string{"BANKOFBARODA"}
-	// 	startDate := "2023-01-01 09:15"
-	// 	endDate := "2023-12-31 15:30"
-	// 	initialCapital := 100000.0
-
-	// 	for _, symbol := range symbols {
-	// 		backtest.BacktestSymbol(symbol, initialCapital, startDate, endDate, authParams.APIKey, session)
-	// 	}
-	// }
-	// hour, _, _ := time.Now().Clock()
-	// if (hour >= 9) && (hour <= 15) {
+	ABClient, _, _ := authenticate(filepath)
+	hour, _, _ := time.Now().Clock()
+	if (hour >= 9) && (hour <= 15) {
 		//Place Bulk Order
-		if false {
-			// order.PlaceBulkOrder(ABClient, stocksFilePath, "NSE", client)
+		if true {
+			order.PlaceBulkOrder(ABClient, stocksFilePath, "NSE")
 		}
 		if false {
 			// market.MonitorOrders(ABClient, authParams, session, client)
@@ -110,10 +100,10 @@ func main() {
 		// if true {
 		// 	order.OrderBook(ABClient, authParams, session)
 		// }
-		if true {
+		if false {
 			var ListParams []SmartApi.OrderParams
-			year := 2024
-			// instrument_list := token.GetInstrumentList()
+			// year := 2024
+			instrument_list := token.GetInstrumentList()
 			res, err := os.Open(stocksFilePath)
 			if err != nil {
 				fmt.Println(err)
@@ -123,28 +113,28 @@ func main() {
 				fmt.Println(err)
 			}
 			json.Unmarshal(content, &ListParams)
-			temp := 0.0
-			value := 0.0
-			dates := getDatesInYear(year)
+			// temp := 0.0
+			// value := 0.0
+			// dates := getDatesInYear(year)
 			for _, list := range ListParams {
-				// token := token.TokenLookUp(list.TradingSymbol , instrument_list, "NSE" )
-				// fmt.Println(list.TradingSymbol, token )
-				for _, date := range dates {
-					// fmt.Println(dateWithTime + " 09:15")
-					startDate := date.Format("2006-01-02") + " 09:15"
-					endDate := date.Format("2006-01-02") + " 15:30"
-					interval := "FIVE_MINUTE"
-					initialCapital := 10000.0
-					temp = backtest.BacktestSymbol(list.SymbolToken, interval ,initialCapital, startDate, endDate, authParams.APIKey, session)
-					value = temp + value
-					time.Sleep(2*time.Second)
-				}
+				token := token.TokenLookUp(list.TradingSymbol , instrument_list, "NSE" )
+				fmt.Println(list.TradingSymbol, token )
+				// for _, date := range dates {
+				// 	// fmt.Println(dateWithTime + " 09:15")
+				// 	startDate := date.Format("2006-01-02") + " 09:15"
+				// 	endDate := date.Format("2006-01-02") + " 15:30"
+				// 	interval := "FIVE_MINUTE"
+				// 	initialCapital := 10000.0
+				// 	temp = backtest.BacktestSymbol(list.SymbolToken, interval ,initialCapital, startDate, endDate, authParams.APIKey, session)
+				// 	value = temp + value
+				// 	time.Sleep(2*time.Second)
+				// }
 				
 			}
 
-			fmt.Println("VALUE:", value)
+			// fmt.Println("VALUE:", value)
 		}
-	// } else {
-	// 	fmt.Println("Can't trade since out of market hours")
-	// }
+	} else {
+		fmt.Println("Can't trade since out of market hours")
+	}
 }
