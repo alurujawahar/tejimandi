@@ -7,11 +7,11 @@ import (
 	"io"
 	"net/http"
 	"os"
-	"time"
+	// "time"
 
 	SmartApi "github.com/angel-one/smartapigo"
-	"github.com/sdcoffey/big"
-	"github.com/sdcoffey/techan"
+	// "github.com/sdcoffey/big"
+	// "github.com/sdcoffey/techan"
 )
 
 
@@ -109,7 +109,7 @@ func (hi *hist_input) getCandleData(token string, apiKey string) ([]Candle, erro
 			olhcarray = append(olhcarray, olhc)
 	}
 
-	fmt.Println("OLHC:", olhcarray)
+	// fmt.Println("OLHC:", olhcarray)
 
 	// var hist []HistoricalData
 
@@ -121,70 +121,74 @@ func (hi *hist_input) getCandleData(token string, apiKey string) ([]Candle, erro
 }
 
 
-func BacktestSymbol(symbol string, initialCapital float64, backTestStartDate string, backTestEndDate string, apiKey string, session SmartApi.UserSession ) {
+func BacktestSymbol(symbol string, interval string, initialCapital float64, backTestStartDate string, backTestEndDate string, apiKey string, session SmartApi.UserSession ) float64 {
 
 	histInput := hist_input{
 		FromDate:    backTestStartDate,
 		ToDate:      backTestEndDate,
 		Exhange:     "NSE",
-		SymbolToken: "4668",
-		Interval:    "ONE_HOUR",
+		SymbolToken: symbol,
+		Interval:    interval,
 	}
     data, err :=  histInput.getCandleData(session.AccessToken, apiKey)
 	if err != nil{
 		fmt.Println(err)
 	}
-    series := techan.NewTimeSeries()
-	fmt.Println("===================================================================")
-	fmt.Println("Data", data)
-	fmt.Println("===================================================================")
-    for _, record := range data {
-        date, _ := time.Parse("2006-01-02", fmt.Sprintf("%.2f", record.Date))
-        candle := techan.NewCandle(techan.NewTimePeriod(date, time.Hour*24))
-        candle.OpenPrice = big.NewDecimal(record.Open.(float64))
-        candle.ClosePrice = big.NewDecimal(record.Close.(float64))
-        candle.MaxPrice = big.NewDecimal(record.High.(float64))
-        candle.MinPrice = big.NewDecimal(record.Low.(float64))
-        candle.Volume = big.NewDecimal(float64(record.Volume.(float64)))
-        series.AddCandle(candle)
-    }
-
-    // Simulate the bracket order logic
     capital := initialCapital
     position := 0
 
-    for i := 1; i < series.LastIndex(); i++ {
-        candle := series.Candles[i]
-        price := candle.ClosePrice.Float()
-        sellLimit := price * 1.10
-        stopLoss := price * 0.99
+	if len(data) == 0 {
+		return 0.0
+	}
+	fmt.Println("date:", backTestStartDate)
+	for _, candle := range data {
+        // candle := series.Candles[i]
+        // price := candle.Open.(float64)
+		buyPrice := data[0].Open.(float64)
+		// buyPrice := candle.Open.(float64)
+		// fmt.Println("Open Price:", price)
+        sellLimit := buyPrice * 1.10
+        stopLoss := buyPrice * 0.98
+
+		// fmt.Println("sellLimit:", sellLimit)
+		// fmt.Println("StopLoss", stopLoss)
 
         if position == 0 {
             // Buy at market price
-            position = int(capital / price)
-            capital -= float64(position) * price
-            fmt.Printf("Bought %d shares of %s at %.2f on %s\n", position, symbol, price, series.Candles[i].Period.Start.Format("2006-01-02"))
-        } else {
+            position = int(capital / buyPrice)
+            capital -= float64(position) * buyPrice
+            fmt.Printf("Bought %d shares of %s at %.2f on %s\n", position, symbol, buyPrice, candle.Date)
+        } else if position == 1 {
+			continue
+		} else {
             // Check sell conditions
-            high := series.Candles[i].MaxPrice.Float()
-            low := series.Candles[i].MinPrice.Float()
-
+            high := candle.High.(float64)
+            low := candle.Low.(float64)
+			fmt.Println("High:", high)
+			fmt.Println("SellLimit:", sellLimit)
+			fmt.Println("Low:", low)
+			fmt.Println("Stoploss", stopLoss)
+			fmt.Println("==============================")
             if high >= sellLimit {
                 capital += float64(position) * sellLimit
-                fmt.Printf("Sold %d shares of %s at %.2f on %s\n", position, symbol, sellLimit, series.Candles[i].Period.Start.Format("2006-01-02"))
-                position = 0
+                fmt.Printf("Sold %d shares of %s at %.2f on %s\n", position, symbol, sellLimit, candle.Date)
+                position = 1
+				fmt.Println("Capital(High >= sellLimit):", capital)
             } else if low <= stopLoss {
                 capital += float64(position) * stopLoss
-                fmt.Printf("Sold %d shares of %s at %.2f (stop loss) on %s\n", position, symbol, stopLoss, series.Candles[i].Period.Start.Format("2006-01-02"))
-                position = 0
+                fmt.Printf("Sold %d shares of %s at %.2f (stop loss) on %s\n", position, symbol, stopLoss, candle.Date)
+                position = 1
+				fmt.Println("Capital(low <= stopLoss):", capital)
             }
         }
     }
-	lastCandle := series.LastCandle()
-    finalValue := capital + float64(position)*lastCandle.ClosePrice.Float()
+	lastCandle := data[len(data)-1]
+    finalValue := capital + float64(position)*lastCandle.Close.(float64)
     fmt.Printf("Symbol: %s\n", symbol)
     fmt.Printf("Initial Capital: %.2f\n", initialCapital)
     fmt.Printf("Final Value: %.2f\n", finalValue)
     fmt.Printf("Profit/Loss: %.2f\n", finalValue-initialCapital)
     fmt.Println("-----------------------------------------------------")
+
+	return finalValue-initialCapital
 }
