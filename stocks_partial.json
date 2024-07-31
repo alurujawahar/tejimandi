@@ -1,14 +1,14 @@
 [
    {
       "variety": "NORMAL",
-      "tradingsymbol": "PEL-EQ",
-      "symboltoken": "12024",
+      "tradingsymbol": "ZOMATO-EQ",
+      "symboltoken": "5097",
       "transactiontype": "BUY",
       "exchange": "NSE",
       "ordertype": "MARKET",
       "producttype": "INTRADAY",
       "duration": "DAY",
-      "price": "",
+      "price": 0.0,
       "squareoff": "0",
       "stoploss": "0",
       "quantity": "1",

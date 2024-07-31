@@ -56,11 +56,14 @@ func PlaceBulkOrder(A *SmartApi.Client, s string, exchange string)  {
 			fmt.Println(err)
 		}
 		stk.Price = ltpResp.Ltp
+		stk.SquareOff = fmt.Sprintf("%.2f",ltpResp.Ltp * 1.10)
+		stk.StopLoss = fmt.Sprintf("%.2f",ltpResp.Ltp * 0.98)
 
-		if stk.ProductType == "BO" {
-			stk.SquareOff = fmt.Sprintf("%.2f",ltpResp.Ltp * 1.10)
-			stk.StopLoss = fmt.Sprintf("%.2f",ltpResp.Ltp * 0.98)
-		}
+		fmt.Println("Price:", stk)
+
+		// if stk.ProductType == "BO" || stk.ProductType == "INTRADAY" {
+			
+		// }
 
 		if true {
 			if stk.Executed == false {
