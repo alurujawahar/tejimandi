@@ -55,9 +55,9 @@ func PlaceBulkOrder(A *SmartApi.Client, s string, exchange string)  {
 		if err != nil {
 			fmt.Println(err)
 		}
-		stk.Price = ltpResp.Ltp
+		// stk.Price = ltpResp.Ltp
 		stk.SquareOff = fmt.Sprintf("%.2f",ltpResp.Ltp * 1.10)
-		stk.StopLoss = fmt.Sprintf("%.2f",ltpResp.Ltp * 0.98)
+		stk.StopLoss = fmt.Sprintf("%.2f",ltpResp.Ltp * 0.994)
 
 		fmt.Println("Price:", stk)
 
