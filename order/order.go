@@ -1,25 +1,58 @@
 package order
 
 import (
-	// "context"
 	"encoding/json"
 	"fmt"
 	"io"
-	// "log"
+	"net/http"
 	"os"
 	"strings"
-	// "time"
+	"time"
+
+	"github.com/pquerna/otp/totp"
 
 	h "github.com/alurujawahar/tejimandi/httpRequest"
 	SmartApi "github.com/angel-one/smartapigo"
 )
 
-// type ClientParams struct {
-// 	ClientCode  string `json:"client"`
-// 	Password  string `json:"password"`
-// 	APIKey  string `json:"api_key"`
-// 	TOTPKEY string `json:"totp"`
-// }
+func authenticate(f string) (*SmartApi.Client, h.ClientParams, SmartApi.UserSession) {
+	var params h.ClientParams
+	file, err := os.Open(f)
+	if err != nil {
+		fmt.Println("Unable to open File %v", err)
+	}
+	defer file.Close()
+
+	content, err := io.ReadAll(file)
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	json.Unmarshal(content, &params)
+	ABClient := SmartApi.New(params.ClientCode, params.Password, params.APIKey)
+	fmt.Println("Client :- ", ABClient)
+
+	newTotp, err := totp.GenerateCode(params.TOTPKEY, time.Now())
+	if err != nil {
+		fmt.Println("Failed to generate Totp %v", err)
+	}
+	session, err := ABClient.GenerateSession(newTotp)
+	if err != nil {
+		fmt.Println(err.Error())
+		os.Exit(1)
+	}
+	if err != nil {
+		fmt.Println(err.Error())
+		os.Exit(1)
+	}
+	session.UserProfile, err = ABClient.GetUserProfile()
+
+	if err != nil {
+		fmt.Println(err.Error())
+		os.Exit(1)
+	}
+	return ABClient, params, session
+}
 
 func OrderBook(A *SmartApi.Client, auth h.ClientParams, session SmartApi.UserSession) {
 	url := "https://apiconnect.angelbroking.com/rest/secure/angelbroking/order/v1/getTradeBook"
@@ -30,10 +63,14 @@ func OrderBook(A *SmartApi.Client, auth h.ClientParams, session SmartApi.UserSes
 }
 
 
-func PlaceBulkOrder(A *SmartApi.Client, s string, exchange string)  {
+func PlaceBulkOrder(w http.ResponseWriter, r *http.Request)  {
+	exchange := "NSE"
+	stocksFilePath := "/Users/alurujawahar/Desktop/angel/tejimandi/stocks_partial.json"
+	filepath := "/Users/alurujawahar/Desktop/angel/tejimandi/keys.json"
+	ABClient, _, _ := authenticate(filepath)
 	var OrderParams []SmartApi.OrderParams
 	var ltpParams SmartApi.LTPParams
-	res, err := os.Open(s)
+	res, err := os.Open(stocksFilePath)
 	if err != nil {
 		fmt.Println(err)
 	}
@@ -51,7 +88,7 @@ func PlaceBulkOrder(A *SmartApi.Client, s string, exchange string)  {
 		ltpParams.Exchange = exchange
 		ltpParams.SymbolToken = stk.SymbolToken
 		ltpParams.TradingSymbol = stk.TradingSymbol
-		ltpResp, err := A.GetLTP(ltpParams)
+		ltpResp, err := ABClient.GetLTP(ltpParams)
 		if err != nil {
 			fmt.Println(err)
 		}
@@ -65,21 +102,14 @@ func PlaceBulkOrder(A *SmartApi.Client, s string, exchange string)  {
 		fmt.Println("Price:", stk.Price)
 		fmt.Println("")
 
-		// if stk.ProductType == "BO" || stk.ProductType == "INTRADAY" {
-			
-		// }
-
 		if false {
-			if stk.Executed == false {
-				fmt.Println("Placing Order for Stock: ", stk.TradingSymbol)
-				order, err := A.PlaceOrder(stk)
-				if err != nil {
-					fmt.Println(err)
-					return
-				}
-				fmt.Println("Placed Order ID and Script :- ", order)
-				stk.Executed = true
+			fmt.Println("Placing Order for Stock: ", stk.TradingSymbol)
+			order, err := ABClient.PlaceOrder(stk)
+			if err != nil {
+				fmt.Println(err)
+				return
 			}
+			fmt.Println("Placed Order ID and Script :- ", order)
 		}
 	}
 }

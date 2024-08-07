@@ -3,136 +3,209 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"io"
-	"os"
+	// "io"
+	"log"
+	"net/http"
+	// "os"
 	"time"
-	SmartApi "github.com/angel-one/smartapigo"
-	"github.com/pquerna/otp/totp"
-	token "github.com/alurujawahar/tejimandi/token"
+
+	// h "github.com/alurujawahar/tejimandi/httpRequest"
 	order "github.com/alurujawahar/tejimandi/order"
-	// db "github.com/alurujawahar/tejimandi/database"
-	// market "github.com/alurujawahar/tejimandi/market"
-	h "github.com/alurujawahar/tejimandi/httpRequest"
-	// backtest "github.com/alurujawahar/tejimandi/backtest"
+	
+	"github.com/gorilla/mux"
+	
+	bolt "go.etcd.io/bbolt"
 )
 
-
-func authenticate(f string) (*SmartApi.Client, h.ClientParams, SmartApi.UserSession) {
-	var params h.ClientParams
-	file, err := os.Open(f)
-	if err != nil {
-		fmt.Println("Unable to open File %v", err)
-	}
-	defer file.Close()
-
-	content, err := io.ReadAll(file)
-	if err != nil {
-		fmt.Println(err)
-	}
-
-	json.Unmarshal(content, &params)
-	// Create New Angel Broking Client
-	ABClient := SmartApi.New(params.ClientCode, params.Password, params.APIKey)
-	fmt.Println("Client :- ", ABClient)
-
-	newTotp, err := totp.GenerateCode(params.TOTPKEY, time.Now())
-	if err != nil {
-		fmt.Println("Failed to generate Totp %v", err)
-	}
-	// User Login and Generate User Session
-	session, err := ABClient.GenerateSession(newTotp)
-	if err != nil {
-		fmt.Println(err.Error())
-		os.Exit(1)
-	}
-	// Renew User Tokens using refresh token
-	// session.UserSessionTokens, err = ABClient.RenewAccessToken(session.RefreshToken)
-	if err != nil {
-		fmt.Println(err.Error())
-		os.Exit(1)
-	}
-	// fmt.Println("User Session Tokens :- ", session.UserSessionTokens)
-
-	//Get User Profile
-	session.UserProfile, err = ABClient.GetUserProfile()
-
-	if err != nil {
-		fmt.Println(err.Error())
-		os.Exit(1)
-	}
-
-	// fmt.Println("User Profile :- ", session.UserProfile)
-	// fmt.Println("User Session Object :- ", session)
-	return ABClient, params, session
+type StockData struct {
+    Symbol string  `json:"symbol"`
+    Price  float64 `json:"price"`
 }
 
-func getDatesInYear(year int) []time.Time {
-    var dates []time.Time
+var (
+    db        *bolt.DB
+    authToken = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE2Mjg3NTc4NzV9.TJVA95OrM7E2cBab30RMHrHDcEfxjoYZgeFONFh7HgQ"
+)
 
-    // Start from the first day of the year
-    currentDate := time.Date(year, time.January, 1, 0, 0, 0, 0, time.UTC)
+func initDB() {
+    var err error
+    db, err = bolt.Open("stocks.db", 0600, &bolt.Options{Timeout: 1 * time.Second})
+    if err != nil {
+        log.Fatalf("failed to open database: %v", err)
+    }
+}
 
-    for currentDate.Year() == year {
-        dates = append(dates, currentDate)
-        currentDate = currentDate.AddDate(0, 0, 1)
+
+
+func getStockHandler(w http.ResponseWriter, r *http.Request) {
+    symbol := mux.Vars(r)["symbol"]
+
+    var stock StockData
+    err := db.View(func(tx *bolt.Tx) error {
+        bucket := tx.Bucket([]byte("Stocks"))
+        if bucket == nil {
+            return fmt.Errorf("Bucket not found")
+        }
+
+        data := bucket.Get([]byte(symbol))
+        if data == nil {
+            return fmt.Errorf("Stock not found")
+        }
+
+        return json.Unmarshal(data, &stock)
+    })
+
+    if err != nil {
+        http.Error(w, err.Error(), http.StatusNotFound)
+        return
     }
 
-    return dates
+    w.Header().Set("Content-Type", "application/json")
+    json.NewEncoder(w).Encode(stock)
+}
+
+func setStockHandler(w http.ResponseWriter, r *http.Request) {
+    var stock StockData
+    if err := json.NewDecoder(r.Body).Decode(&stock); err != nil {
+        http.Error(w, "Invalid input", http.StatusBadRequest)
+        return
+    }
+
+    err := db.Update(func(tx *bolt.Tx) error {
+        bucket, err := tx.CreateBucketIfNotExists([]byte("Stocks"))
+        if err != nil {
+            return fmt.Errorf("create bucket: %w", err)
+        }
+
+        data, err := json.Marshal(stock)
+        if err != nil {
+            return fmt.Errorf("failed to marshal stock data: %w", err)
+        }
+        if err := bucket.Put([]byte(stock.Symbol), data); err != nil {
+            return fmt.Errorf("failed to put stock data into bucket: %w", err)
+        }
+
+        return nil
+    })
+
+    if err != nil {
+        http.Error(w, err.Error(), http.StatusInternalServerError)
+        return
+    }
+
+    w.WriteHeader(http.StatusCreated)
+    fmt.Fprintf(w, "Stock data for %s set successfully!", stock.Symbol)
+}
+
+func setMultipleStocksHandler(w http.ResponseWriter, r *http.Request) {
+    var stocks []StockData
+    if err := json.NewDecoder(r.Body).Decode(&stocks); err != nil {
+        http.Error(w, "Invalid input", http.StatusBadRequest)
+        return
+    }
+
+    err := db.Update(func(tx *bolt.Tx) error {
+        bucket, err := tx.CreateBucketIfNotExists([]byte("Stocks"))
+        if err != nil {
+            return fmt.Errorf("create bucket: %w", err)
+        }
+
+        for _, stock := range stocks {
+            data, err := json.Marshal(stock)
+            if err != nil {
+                return fmt.Errorf("failed to marshal stock data: %w", err)
+            }
+            if err := bucket.Put([]byte(stock.Symbol), data); err != nil {
+                return fmt.Errorf("failed to put stock data into bucket: %w", err)
+            }
+        }
+
+        return nil
+    })
+
+    if err != nil {
+        http.Error(w, err.Error(), http.StatusInternalServerError)
+        return
+    }
+
+    w.WriteHeader(http.StatusCreated)
+    fmt.Fprintf(w, "Stock data set successfully!")
+}
+
+func getAllStocksHandler(w http.ResponseWriter, r *http.Request) {
+    var stocks []StockData
+
+    err := db.View(func(tx *bolt.Tx) error {
+        bucket := tx.Bucket([]byte("Stocks"))
+        if bucket == nil {
+            return fmt.Errorf("Bucket not found")
+        }
+
+        err := bucket.ForEach(func(k, v []byte) error {
+            var stock StockData
+            if err := json.Unmarshal(v, &stock); err != nil {
+                return fmt.Errorf("failed to unmarshal stock data: %w", err)
+            }
+            stocks = append(stocks, stock)
+            return nil
+        })
+
+        if err != nil {
+            return fmt.Errorf("failed to iterate through bucket: %w", err)
+        }
+
+        return nil
+    })
+
+    if err != nil {
+        http.Error(w, err.Error(), http.StatusInternalServerError)
+        return
+    }
+
+    w.Header().Set("Content-Type", "application/json")
+    json.NewEncoder(w).Encode(stocks)
+}
+
+
+func authMiddleware(next http.Handler) http.Handler {
+    return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+        token := r.Header.Get("Authorization")
+        if token != authToken {
+            http.Error(w, "Unauthorized", http.StatusUnauthorized)
+            return
+        }
+        next.ServeHTTP(w, r)
+    })
 }
 
 func main() {
-	stocksFilePath := "/Users/alurujawahar/Desktop/angel/tejimandi/stocks_partial.json"
-	filepath := "/Users/alurujawahar/Desktop/angel/tejimandi/keys.json"
+	// stocksFilePath := "/Users/alurujawahar/Desktop/angel/tejimandi/stocks_partial.json"
 	
-	// client := db.ConnectMongo()
+	
+	
 
+	initDB()
+    defer db.Close()
+
+    r := mux.NewRouter()
+    r.HandleFunc("/stock/{symbol}", getStockHandler).Methods("GET")
+    r.HandleFunc("/stock", setStockHandler).Methods("POST")
+    r.HandleFunc("/stocks", setMultipleStocksHandler).Methods("POST")
+    r.HandleFunc("/stocks", getAllStocksHandler).Methods("GET")
+	r.HandleFunc("/simple", order.PlaceBulkOrder).Methods("POST")
+
+	r.Use(authMiddleware)
+
+	http.Handle("/", r)
+    fmt.Println("Server listening on port 8080...")
+    log.Fatal(http.ListenAndServe(":8080", nil))
+	
 	//Get Authenticated
-	ABClient, _, _ := authenticate(filepath)
+	// ABClient, _, _ := authenticate(filepath)
 	hour, _, _ := time.Now().Clock()
 	if (hour >= 9) && (hour <= 15) {
-		//Place Bulk Order
 		if true {
-			order.PlaceBulkOrder(ABClient, stocksFilePath, "NSE")
-		}
-		if false {
-			// market.MonitorOrders(ABClient, authParams, session, client)
-		}
-		// if true {
-		// 	order.OrderBook(ABClient, authParams, session)
-		// }
-		if false {
-			var ListParams []SmartApi.OrderParams
-			// year := 2024
-			instrument_list := token.GetInstrumentList()
-			res, err := os.Open(stocksFilePath)
-			if err != nil {
-				fmt.Println(err)
-			}
-			content, err := io.ReadAll(res)
-			if err != nil {
-				fmt.Println(err)
-			}
-			json.Unmarshal(content, &ListParams)
-			// temp := 0.0
-			// value := 0.0
-			// dates := getDatesInYear(year)
-			for _, list := range ListParams {
-				token := token.TokenLookUp(list.TradingSymbol , instrument_list, "NSE" )
-				fmt.Println(list.TradingSymbol, token )
-				// for _, date := range dates {
-				// 	// fmt.Println(dateWithTime + " 09:15")
-				// 	startDate := date.Format("2006-01-02") + " 09:15"
-				// 	endDate := date.Format("2006-01-02") + " 15:30"
-				// 	interval := "FIVE_MINUTE"
-				// 	initialCapital := 10000.0
-				// 	temp = backtest.BacktestSymbol(list.SymbolToken, interval ,initialCapital, startDate, endDate, authParams.APIKey, session)
-				// 	value = temp + value
-				// 	time.Sleep(2*time.Second)
-				// }
-				
-			}
-
-			// fmt.Println("VALUE:", value)
+			// order.PlaceBulkOrder(ABClient, stocksFilePath, "NSE")
 		}
 	} else {
 		fmt.Println("Can't trade since out of market hours")
