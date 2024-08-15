@@ -15,6 +15,14 @@ import (
 	SmartApi "github.com/angel-one/smartapigo"
 )
 
+const apiUrl = "localhost:8080"
+const authToken = "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE2Mjg3NTc4NzV9.TJVA95OrM7E2cBab30RMHrHDcEfxjoYZgeFONFh7HgQ"
+
+type StockData struct {
+	Token  string `json:"token"`
+    Symbol string  `json:"symbol"`
+}
+
 func authenticate(f string) (*SmartApi.Client, h.ClientParams, SmartApi.UserSession) {
 	var params h.ClientParams
 	file, err := os.Open(f)
@@ -64,47 +72,65 @@ func OrderBook(A *SmartApi.Client, auth h.ClientParams, session SmartApi.UserSes
 
 
 func PlaceBulkOrder(w http.ResponseWriter, r *http.Request)  {
+
+	var Symbol string
+	var Quantity string
+	var ltpParams SmartApi.LTPParams
+	var responseData []StockData
+
 	exchange := "NSE"
-	stocksFilePath := "/Users/alurujawahar/Desktop/angel/tejimandi/stocks_partial.json"
 	filepath := "/Users/alurujawahar/Desktop/angel/tejimandi/keys.json"
 	ABClient, _, _ := authenticate(filepath)
-	var OrderParams []SmartApi.OrderParams
-	var ltpParams SmartApi.LTPParams
-	res, err := os.Open(stocksFilePath)
-	if err != nil {
-		fmt.Println(err)
-	}
+	
+	req, err := http.NewRequest("GET", "http://"+apiUrl+"/stocks", nil)
+	req.Header.Add("Authorization", authToken)
 
-	content, err := io.ReadAll(res)
+	client := &http.Client{}
+	resp, err := client.Do(req)
 	if err != nil {
-		fmt.Println(err)
+		fmt.Errorf("Error fetching stockts", err)
 	}
+	defer resp.Body.Close()
+	err = json.NewDecoder(resp.Body).Decode(&responseData)
 
-	err = json.Unmarshal(content, &OrderParams)
-	if err != nil {
-		fmt.Println("Unmarshal Failed:", err)
-	}
-	for _, stk := range OrderParams {
+	for _, stk := range responseData {
+		parts := strings.Split(stk.Symbol, ":")
+		if len(parts) == 2 {
+			Symbol = parts[0]
+			Quantity = parts[1]
+			fmt.Printf("Symbol: %s, Quantity: %s\n", Symbol, Quantity)
+		} else {
+			fmt.Println("Invalid data format")
+		}
 		ltpParams.Exchange = exchange
-		ltpParams.SymbolToken = stk.SymbolToken
-		ltpParams.TradingSymbol = stk.TradingSymbol
+		ltpParams.SymbolToken = stk.Token
+		ltpParams.TradingSymbol = Symbol
 		ltpResp, err := ABClient.GetLTP(ltpParams)
 		if err != nil {
 			fmt.Println(err)
 		}
-		stk.Price = ltpResp.Ltp
-		stk.SquareOff = fmt.Sprintf("%.2f",ltpResp.Ltp * 1.10)
-		stk.StopLoss = fmt.Sprintf("%.2f",ltpResp.Ltp * 0.994)
 
-		fmt.Println("Symbol", stk.TradingSymbol)
-		fmt.Println("Squareoff", stk.SquareOff)
-		fmt.Println("Stoploss", stk.StopLoss)
-		fmt.Println("Price:", stk.Price)
-		fmt.Println("")
+		OrderParams := SmartApi.OrderParams{
+			Variety: "NORMAL",
+			TradingSymbol: Symbol,
+			SymbolToken: stk.Token,
+			TransactionType: "BUY",
+			Exchange: "NSE",
+			OrderType: "MARKET",
+			ProductType: "BO",
+			Duration: "DAY",
+			Price: ltpResp.Ltp,
+			SquareOff: fmt.Sprintf("%.2f",ltpResp.Ltp * 1.10),
+			StopLoss: fmt.Sprintf("%.2f",ltpResp.Ltp * 0.994),
+			Quantity: Quantity,
+			Executed: false,
+			
+		}
 
+		fmt.Println(OrderParams)
 		if false {
-			fmt.Println("Placing Order for Stock: ", stk.TradingSymbol)
-			order, err := ABClient.PlaceOrder(stk)
+			fmt.Println("Placing Order for Stock: ", stk.Symbol)
+			order, err := ABClient.PlaceOrder(OrderParams)
 			if err != nil {
 				fmt.Println(err)
 				return

@@ -17,14 +17,15 @@ import (
 	bolt "go.etcd.io/bbolt"
 )
 
-type StockData struct {
-    Symbol string  `json:"symbol"`
-    Price  float64 `json:"price"`
-}
+
+
+
+const apiUrl = "localhost:8080"
 
 var (
     db        *bolt.DB
-    authToken = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE2Mjg3NTc4NzV9.TJVA95OrM7E2cBab30RMHrHDcEfxjoYZgeFONFh7HgQ"
+    authToken = "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE2Mjg3NTc4NzV9.TJVA95OrM7E2cBab30RMHrHDcEfxjoYZgeFONFh7HgQ"
+    
 )
 
 func initDB() {
@@ -40,7 +41,7 @@ func initDB() {
 func getStockHandler(w http.ResponseWriter, r *http.Request) {
     symbol := mux.Vars(r)["symbol"]
 
-    var stock StockData
+    var stock order.StockData
     err := db.View(func(tx *bolt.Tx) error {
         bucket := tx.Bucket([]byte("Stocks"))
         if bucket == nil {
@@ -65,7 +66,7 @@ func getStockHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func setStockHandler(w http.ResponseWriter, r *http.Request) {
-    var stock StockData
+    var stock order.StockData
     if err := json.NewDecoder(r.Body).Decode(&stock); err != nil {
         http.Error(w, "Invalid input", http.StatusBadRequest)
         return
@@ -81,7 +82,7 @@ func setStockHandler(w http.ResponseWriter, r *http.Request) {
         if err != nil {
             return fmt.Errorf("failed to marshal stock data: %w", err)
         }
-        if err := bucket.Put([]byte(stock.Symbol), data); err != nil {
+        if err := bucket.Put([]byte(stock.Token), data); err != nil {
             return fmt.Errorf("failed to put stock data into bucket: %w", err)
         }
 
@@ -94,11 +95,11 @@ func setStockHandler(w http.ResponseWriter, r *http.Request) {
     }
 
     w.WriteHeader(http.StatusCreated)
-    fmt.Fprintf(w, "Stock data for %s set successfully!", stock.Symbol)
+    fmt.Fprintf(w, "Stock data for %s set successfully!", stock.Token)
 }
 
 func setMultipleStocksHandler(w http.ResponseWriter, r *http.Request) {
-    var stocks []StockData
+    var stocks []order.StockData
     if err := json.NewDecoder(r.Body).Decode(&stocks); err != nil {
         http.Error(w, "Invalid input", http.StatusBadRequest)
         return
@@ -115,7 +116,7 @@ func setMultipleStocksHandler(w http.ResponseWriter, r *http.Request) {
             if err != nil {
                 return fmt.Errorf("failed to marshal stock data: %w", err)
             }
-            if err := bucket.Put([]byte(stock.Symbol), data); err != nil {
+            if err := bucket.Put([]byte(stock.Token), data); err != nil {
                 return fmt.Errorf("failed to put stock data into bucket: %w", err)
             }
         }
@@ -133,7 +134,7 @@ func setMultipleStocksHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func getAllStocksHandler(w http.ResponseWriter, r *http.Request) {
-    var stocks []StockData
+    var stocks []order.StockData
 
     err := db.View(func(tx *bolt.Tx) error {
         bucket := tx.Bucket([]byte("Stocks"))
@@ -142,7 +143,7 @@ func getAllStocksHandler(w http.ResponseWriter, r *http.Request) {
         }
 
         err := bucket.ForEach(func(k, v []byte) error {
-            var stock StockData
+            var stock order.StockData
             if err := json.Unmarshal(v, &stock); err != nil {
                 return fmt.Errorf("failed to unmarshal stock data: %w", err)
             }
@@ -170,6 +171,7 @@ func getAllStocksHandler(w http.ResponseWriter, r *http.Request) {
 func authMiddleware(next http.Handler) http.Handler {
     return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
         token := r.Header.Get("Authorization")
+        fmt.Println("Token:", token)
         if token != authToken {
             http.Error(w, "Unauthorized", http.StatusUnauthorized)
             return
@@ -192,7 +194,7 @@ func main() {
     r.HandleFunc("/stock", setStockHandler).Methods("POST")
     r.HandleFunc("/stocks", setMultipleStocksHandler).Methods("POST")
     r.HandleFunc("/stocks", getAllStocksHandler).Methods("GET")
-	r.HandleFunc("/simple", order.PlaceBulkOrder).Methods("POST")
+	r.HandleFunc("/placeOrder", order.PlaceBulkOrder).Methods("POST")
 
 	r.Use(authMiddleware)
 
